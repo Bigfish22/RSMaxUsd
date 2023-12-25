@@ -1,0 +1,18 @@
+{
+   "Plugins":[
+    {
+      "Info": {
+        "MaxUsd": {
+          "ShaderReader": {
+            "providesTranslator": [
+              "redshift_usd_material"
+            ]
+          },
+          "JobContextPlugin": {}
+        }
+      },
+      "Name": "RSShaderReader",
+      "Type": "python"
+    }
+   ]
+}
