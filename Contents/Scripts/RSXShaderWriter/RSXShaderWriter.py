@@ -184,8 +184,9 @@ class rsxshaderwriter(maxUsd.ShaderWriter):
             return
         
         value = getattr(Node, str(Property))
-        if value == getattr(template, str(Property)): #TODO: This should also check if a value is animated, if its animated we should probably write its values.
-            return #The property is still at its defualt value, so we can just skip doing anything with it
+        if not (rt.classOf(Node) == rt.rsOSLMap):
+            if value == getattr(template, str(Property)): #TODO: This should also check if a value is animated, if its animated we should probably write its values.
+                return #The property is still at its defualt value, so we can just skip doing anything with it
             
         type = rt.classOf(value)
         
