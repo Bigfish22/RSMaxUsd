@@ -135,6 +135,8 @@ schemaToMax = {'redshift::': rt.MultiOutputChannelTexmapToTexmap,
 class RSShaderReader(maxUsd.ShaderReader):
     def Read(self):
         try:
+            self.MapLibrary = {}
+            
             prim = self.GetUsdPrim() #Turn this into a max material
             
             surfaceConnections = prim.GetAttributes()
@@ -169,6 +171,7 @@ class RSShaderReader(maxUsd.ShaderReader):
              
              
             self.RegisterCreatedMaterial(prim.GetPrimPath(), handle) #Register here and hopefully max will assign the material we made?
+            self.MapLibrary[prim] = handle
             return True
             
         except Exception as e:
@@ -186,8 +189,11 @@ class RSShaderReader(maxUsd.ShaderReader):
                 print(shaderID, "is not supported by this reader!")
                 return (None, None)
                 
-        maxNode = schemaToMax[shaderID]()
-        maxNode.name = shaderName
+        if shader in self.MapLibrary:
+            maxNode = rt.getAnimByHandle(self.MapLibrary[shader])
+        else:
+            maxNode = schemaToMax[shaderID]()
+            maxNode.name = shaderName
             
         MapPropertyName = propertyName
         if not propertyName.endswith("_input"):
@@ -223,6 +229,7 @@ class RSShaderReader(maxUsd.ShaderReader):
                                 rt.USDImporter.SetMaterialParamByName(maxNode, ChildpropertyName, value)
                                 
                                 
+        self.MapLibrary[shader] = rt.getHandleByAnim(maxNode)
         
         #are we a multioutput?
         if hasattr(maxNode, "numIMultipleOutputChannels"):
