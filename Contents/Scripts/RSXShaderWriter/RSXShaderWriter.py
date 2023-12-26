@@ -138,6 +138,8 @@ maxShaderToRS = {rt.MultiOutputChannelTexmapToTexmap : ["", 'out'],
                 rt.rsIncandescent : ['Incandescent', 'outColor'],
                 rt.rsStoreColorToAOV : ['StoreColorToAOV', 'outColor']}
                     
+PropertyRemaps = {rt.rsOSLMap : {'OSLCode':'RS_osl_code', 'oslFilename':'RS_osl_file', 'oslSource':'RS_osl_source'}}
+
 
 class rsxshaderwriter(maxUsd.ShaderWriter):
     def Write(self):
@@ -183,8 +185,10 @@ class rsxshaderwriter(maxUsd.ShaderWriter):
         if(str(Property).endswith(("_map","_mapamount", "_mapenable", "_amount", "_enable", "_input"))):
             return
         
+        nodeClass = rt.ClassOf(Node)
+        
         value = getattr(Node, str(Property))
-        if not (rt.classOf(Node) == rt.rsOSLMap):
+        if not (nodeClass == rt.rsOSLMap):
             if value == getattr(template, str(Property)): #TODO: This should also check if a value is animated, if its animated we should probably write its values.
                 return #The property is still at its defualt value, so we can just skip doing anything with it
             
@@ -212,6 +216,11 @@ class rsxshaderwriter(maxUsd.ShaderWriter):
                             assetPath = re.sub("1[0-9]{3}", "<UDIM>", assetPath)
                     except:
                         pass
+                if nodeClass in PropertyRemaps:
+                    if str(Property) in PropertyRemaps[nodeClass]:
+                        propertyName = PropertyRemaps[nodeClass][str(Property)]
+                        Prim.CreateInput(propertyName, Sdf.ValueTypeNames.Asset).Set(assetPath)
+                        return
                 Prim.CreateInput(propertyName, Sdf.ValueTypeNames.Asset).Set(assetPath)
                 return
         elif type == rt.StandardUVGen: #partial support for bitmap uv settings even though it doesn't match rstexture/texturesampler
@@ -222,7 +231,11 @@ class rsxshaderwriter(maxUsd.ShaderWriter):
             Prim.CreateInput("offset_Y", Sdf.ValueTypeNames.Float).Set(value.V_Offset)
             return
             
-            
+        if nodeClass in PropertyRemaps:
+            if str(Property) in PropertyRemaps[nodeClass]:
+                propertyName = PropertyRemaps[nodeClass][str(Property)]
+                Prim.CreateInput(propertyName, sdfType).Set(value)
+                return
         Prim.CreateInput(str(Property), sdfType).Set(value)
         
     def addShader(self, parentPrim, parentNode, Property):

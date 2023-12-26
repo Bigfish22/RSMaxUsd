@@ -193,6 +193,10 @@ class RSShaderReader(maxUsd.ShaderReader):
         if not propertyName.endswith("_input"):
             MapPropertyName = propertyName + "_map"
         
+        if rt.classOf(maxNode) == rt.rsOSLMap: #set these first if its an osl node, or we will not have any paramters to set :D
+            maxNode.OSLCode = shader.GetAttribute("inputs:RS_osl_code").Get()
+            maxNode.oslFilename = shader.GetAttribute("inputs:RS_osl_file").Get().path
+            maxNode.oslSource = shader.GetAttribute("inputs:RS_osl_source").Get()
         
         for i in shader.GetPropertyNames():
                 if i.startswith('inputs:'):
@@ -207,25 +211,16 @@ class RSShaderReader(maxUsd.ShaderReader):
                                 try:
                                     rt.USDImporter.SetTexmapParamByName(maxNode, ChildMapPropertyName, Map)
                                 except:
-                                    pass
-                                try:
                                     rt.USDImporter.SetMaterialParamByName(maxNode, ChildMapPropertyName, Map)
-                                except:
-                                    pass
                                     
                         value = self.ResolveMaxValue(usdAttribute)
                         if value:
                             if ChildpropertyName == "tex0":  #SCREAMING
                                 ChildpropertyName = "tex0_filename"
-                            #probably fix this garbage later
                             try:
                                 rt.USDImporter.SetTexmapParamByName(maxNode, ChildpropertyName, value)
                             except:
-                                pass
-                            try:
                                 rt.USDImporter.SetMaterialParamByName(maxNode, ChildpropertyName, value)
-                            except:
-                                pass
                                 
                                 
         
