@@ -129,7 +129,8 @@ schemaToMax = {'redshift::': rt.MultiOutputChannelTexmapToTexmap,
                  'redshift::MaterialBlender': rt.rsMaterialBlender,
                  'redshift::Volume': rt.rsVolume,
                  'redshift::Incandescent': rt.rsIncandescent,
-                 'redshift::StoreColorToAOV': rt.rsStoreColorToAOV}
+                 'redshift::StoreColorToAOV': rt.rsStoreColorToAOV,
+                 'redshift::RSColorCorrection': rt.rsColorCorrection}
 
 
 class RSShaderReader(maxUsd.ShaderReader):
@@ -139,11 +140,13 @@ class RSShaderReader(maxUsd.ShaderReader):
             
             prim = self.GetUsdPrim() #Turn this into a max material
             
-            surfaceConnections = prim.GetAttributes()
             surfaceConnection = prim.GetAttribute('inputs:Surface').GetConnections()
+            
+            displacementConnection = prim.GetAttribute('inputs:Displacement').GetConnections()
             
             shader = prim.GetPrimAtPath(surfaceConnection[0].GetPrimPath())
             shaderID = shader.GetAttribute("info:id").Get()
+            
             
             if not (shaderID in schemaToMax):
                 print(shaderID, "is not supported by this reader!")
@@ -168,7 +171,14 @@ class RSShaderReader(maxUsd.ShaderReader):
                             if propertyName == "tex0":  #SCREAMING
                                 propertyName = "tex0_filename"
                             rt.USDImporter.SetMaterialParamByName(maxNode, propertyName, value)
-             
+                            
+            #plob displacement back in if its a standard material
+            if rt.classOf(maxNode) == rt.rsStandardMaterial:
+                if prim.GetAttribute('inputs:Displacement'):
+                    dispConnections = prim.GetAttribute('inputs:Displacement').GetConnections()
+                    MapPropertyName, Map = self.AddNode(prim, "Displacement_input", dispConnections)
+                    if MapPropertyName:
+                        rt.USDImporter.SetMaterialParamByName(maxNode, MapPropertyName, Map)
              
             self.RegisterCreatedMaterial(prim.GetPrimPath(), handle) #Register here and hopefully max will assign the material we made?
             self.MapLibrary[prim] = handle
@@ -200,9 +210,12 @@ class RSShaderReader(maxUsd.ShaderReader):
             MapPropertyName = propertyName + "_map"
         
         if rt.classOf(maxNode) == rt.rsOSLMap: #set these first if its an osl node, or we will not have any paramters to set :D
-            maxNode.OSLCode = shader.GetAttribute("inputs:RS_osl_code").Get()
-            maxNode.oslFilename = shader.GetAttribute("inputs:RS_osl_file").Get().path
-            maxNode.oslSource = shader.GetAttribute("inputs:RS_osl_source").Get()
+            if shader.GetAttribute("inputs:RS_osl_code"):
+                maxNode.OSLCode = shader.GetAttribute("inputs:RS_osl_code").Get()
+            if shader.GetAttribute("inputs:RS_osl_file"):    
+                maxNode.oslFilename = shader.GetAttribute("inputs:RS_osl_file").Get().path
+            if shader.GetAttribute("inputs:RS_osl_source"):
+                maxNode.oslSource = shader.GetAttribute("inputs:RS_osl_source").Get()
         
         for i in shader.GetPropertyNames():
                 if i.startswith('inputs:'):

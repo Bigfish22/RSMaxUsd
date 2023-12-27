@@ -136,7 +136,8 @@ maxShaderToRS = {rt.MultiOutputChannelTexmapToTexmap : ["", 'out'],
                 rt.rsMaterialBlender : ['MaterialBlender', 'outColor'],
                 rt.rsVolume : ['Volume', 'outColor'],
                 rt.rsIncandescent : ['Incandescent', 'outColor'],
-                rt.rsStoreColorToAOV : ['StoreColorToAOV', 'outColor']}
+                rt.rsStoreColorToAOV : ['StoreColorToAOV', 'outColor'],
+                rt.rsColorCorrection : ['RSColorCorrection', 'outColor']}
                     
 PropertyRemaps = {rt.rsOSLMap : {'OSLCode':'RS_osl_code', 'oslFilename':'RS_osl_file', 'oslSource':'RS_osl_source'}}
 
@@ -239,7 +240,7 @@ class rsxshaderwriter(maxUsd.ShaderWriter):
         Prim.CreateInput(str(Property), sdfType).Set(value)
         
     def addShader(self, parentPrim, parentNode, Property):
-        if not (str(Property)).endswith(("_map", "_input")): #TODO: should probably just be checking if this is a textureMap class, this will catch undefined and properties, assuming superClassOf doesn't fail for undefined.
+        if not (str(Property)).endswith(("_map", "p_input")): #TODO: should probably just be checking if this is a textureMap class, this will catch undefined and properties, assuming superClassOf doesn't fail for undefined.
             return
             
         maxShader = getattr(parentNode, str(Property))

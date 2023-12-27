@@ -14,9 +14,9 @@ clone into your autodesk application plugins folder:
 
 ## Limitations
 * only supports rs nodes
-* some nodes will not appear in hydra do to extreme differences between the max and houdini versions. (rs state being an example)
+* some nodes will not appear in hydra due to extreme differences between the max and houdini versions. (rs state being an example)
 * rs bitmap is converted to rs texture
-* ramp UI inputs are not supported (effects brick and tile shaders)
+* ramp UI inputs are not supported (effects rs brick)
 * no ramp or composite support
 * legacy rs nodes are not supported (rs material, rs normal etc)
 * displacement in blend materials is not yet supported.
