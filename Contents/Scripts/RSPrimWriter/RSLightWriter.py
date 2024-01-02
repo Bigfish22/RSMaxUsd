@@ -6,7 +6,7 @@ from pxr import Gf
 import pymxs
 import traceback
                                                                             #mesh lights are gonna be weird
-LightClasses = ["RectLight", "DiskLight", "SphereLight", "CylinderLight", "RectLight", "DomeLight"]
+LightClasses = ["RectLight", "DiskLight", "SphereLight", "CylinderLight", "Xform", "DomeLight"]
 
 class RSLightWriter(maxUsd.PrimWriter):
 
@@ -23,7 +23,7 @@ class RSLightWriter(maxUsd.PrimWriter):
             
             lightPrim = UsdLux.RectLight(prim)
             
-            if self.lightType == 5:
+            if prim.GetTypeName() == "DomeLight":
                 lightPrim.CreateIntensityAttr(node.multiplier)
                 lightPrim.CreateExposureAttr(node.tex0_exposure)
             else:
@@ -35,22 +35,22 @@ class RSLightWriter(maxUsd.PrimWriter):
             lightPrim.CreateColorAttr((node.color.r/255, node.color.g/255, node.color.b/255))
             
             #can probably do this better
-            if self.lightType == 0:
+            if prim.GetTypeName() == "RectLight":
                 lightPrim.CreateWidthAttr(node.width)
                 lightPrim.CreateHeightAttr(node.length)
-            elif self.lightType == 1:
+            elif prim.GetTypeName() == "DiskLight":
                 lightPrim = UsdLux.DiskLight(prim)
                 lightPrim.CreateRadiusAttr(node.width)
-            elif self.lightType == 2:
+            elif prim.GetTypeName() == "SphereLight":
                 lightPrim = UsdLux.SphereLight(prim)
                 lightPrim.CreateRadiusAttr(node.width)
-            elif self.lightType == 3:
+            elif prim.GetTypeName() == "CylinderLight":
                 lightPrim = UsdLux.CylinderLight(prim)
                 lightPrim.CreateRadiusAttr(node.width)
                 lightPrim.CreateLengthAttr(node.length)
-            elif self.lightType == 4:
+            elif sprim.GetTypeName() == "Xform":
                 print("Mesh Light Not Supported Yet")
-            elif self.lightType == 5:
+            elif prim.GetTypeName() == "DomeLight":
                 lightPrim = UsdLux.DomeLight(prim)
                 hdriImage = node.tex0_filename
                 lightPrim.CreateTextureFileAttr(hdriImage)
