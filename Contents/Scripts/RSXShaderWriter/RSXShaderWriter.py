@@ -174,6 +174,7 @@ class rsxshaderwriter(maxUsd.ShaderWriter):
                 self.addProperty(nodeShader, material, property, templateClass)
                 self.addShader(nodeShader, material, property)
             self.addDisplacement(material, surfaceShader)
+            return True
 
         except Exception as e:
             # Quite useful to debug errors in a Python callback

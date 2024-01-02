@@ -6,5 +6,6 @@
     <RuntimeRequirements OS="Win64" Platform="3ds Max" SeriesMin="2022" SeriesMax="2025" />
     <ComponentEntry ModuleName="./Contents/scripts/RSXShaderWriter/registerPlugin.ms" />
     <ComponentEntry ModuleName="./Contents/Scripts/RSShaderReader/registerPlugin.ms" />
+    <ComponentEntry ModuleName="./Contents/Scripts/RSPrimWriter/registerPlugin.ms" />
   </Components>
 </ApplicationPackage>

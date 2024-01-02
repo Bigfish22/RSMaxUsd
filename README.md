@@ -1,7 +1,7 @@
 # RSMaxUsd
 max plugins for importing and exporting redshift USD data.
 
-Currently only handles shader writing and reading. Lights and redshift specific objects will come later.
+Handles material export and import and light export, more features to come.
 
 ## Install instructions
 clone into your autodesk application plugins folder:
@@ -10,6 +10,7 @@ clone into your autodesk application plugins folder:
 ## What can this do?
 * export rs materials, maps and shader graphs
 * import rs materials, maps and shader graphs from usd into max
+* export rs lights as usd lights.
 * materials exported will render within the redshift hydra delegate in houdini/solaris.
 
 ## Limitations
