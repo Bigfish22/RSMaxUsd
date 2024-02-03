@@ -1,6 +1,3 @@
-import time
-
-
 import maxUsd
 from pymxs import runtime as rt
 from pxr import UsdShade, Sdf, Gf
@@ -15,7 +12,8 @@ maxTypeToSdf = {rt.Double : Sdf.ValueTypeNames.Float,
                 rt.BooleanClass : Sdf.ValueTypeNames.Bool,
                 rt.string : Sdf.ValueTypeNames.String,
                 rt.point3 : Sdf.ValueTypeNames.Float3,
-                rt.StandardUVGen : Sdf.ValueTypeNames.Token}
+                rt.StandardUVGen : Sdf.ValueTypeNames.Token,
+                rt.BitMap : Sdf.ValueTypeNames.Token}
                     
 #Key: maxClass : [Houdini/core Name, Output Pin Name(if the node has multi outputs, we can get this from max]
 maxShaderToRS = {rt.MultiOutputChannelTexmapToTexmap : ["", 'out'],
@@ -144,7 +142,6 @@ PropertyRemaps = {rt.rsOSLMap : {'OSLCode':'RS_osl_code', 'oslFilename':'RS_osl_
 
 class rsxshaderwriter(maxUsd.ShaderWriter):
     def Write(self):
-        startTime = time.perf_counter()
         try:
             material = rt.GetAnimByHandle(self.GetMaterial())
             isMultiTarget = len(self.GetExportArgs().GetAllMaterialConversions()) > 1
@@ -154,17 +151,19 @@ class rsxshaderwriter(maxUsd.ShaderWriter):
             surfaceShader = UsdShade.Shader.Define(self.GetUsdStage(), ((self.GetUsdPath()).GetParentPath()).AppendPath("redshift_usd_material1"))
             surfaceShader.CreateIdAttr("redshift_usd_material")
             
-            #self.SetUsdPrim(surfaceShader.GetPrim(), "shader")
-            materialPrim = UsdShade.Material.Get(self.GetUsdStage(), (self.GetUsdPath()).GetParentPath())
             if isMultiTarget:
-                materialPrim = UsdShade.Material.Get(self.GetUsdStage(), (self.GetUsdPath()).GetParentPath().GetParentPath()) #Once I work this chaos out haha, I wont do this
-            materialPrim.CreateSurfaceOutput('Redshift').ConnectToSource(surfaceShader.ConnectableAPI(), "shader")
+                nodeGraphPassthrough = UsdShade.NodeGraph.Get(self.GetUsdStage(), (self.GetUsdPath()).GetParentPath())
+                materialPrim = UsdShade.Material.Get(self.GetUsdStage(), (self.GetUsdPath()).GetParentPath().GetParentPath())
+                materialPrim.CreateSurfaceOutput('Redshift').ConnectToSource(nodeGraphPassthrough.ConnectableAPI(), "shader")
+                nodeGraphPassthrough.CreateOutput('shader', Sdf.ValueTypeNames.Token).ConnectToSource(surfaceShader.ConnectableAPI(), "shader")
+            else:
+                materialPrim = UsdShade.Material.Get(self.GetUsdStage(), (self.GetUsdPath()).GetParentPath())
+                materialPrim.CreateSurfaceOutput('Redshift').ConnectToSource(surfaceShader.ConnectableAPI(), "shader")
             
             
             nodeShader = UsdShade.Shader.Define(self.GetUsdStage(), (self.GetUsdPath()))
             nodeShader.CreateIdAttr("redshift::" + maxShaderToRS[rt.classOf(material)][0])
             
-            #self.SetUsdPrim(nodeShader.GetPrim())
             surfaceShader.CreateInput('Surface', Sdf.ValueTypeNames.Token).ConnectToSource(nodeShader.ConnectableAPI(), "outColor")
             
             
@@ -180,8 +179,6 @@ class rsxshaderwriter(maxUsd.ShaderWriter):
             # Quite useful to debug errors in a Python callback
             print('Write() - Error: %s' % str(e))
             print(traceback.format_exc())
-        endTime = time.perf_counter()
-        print("Shader convert time", endTime - startTime)
             
     def addProperty(self, Prim, Node, Property, template):
         if(str(Property).endswith(("_map","_mapamount", "_mapenable", "_amount", "_enable", "_input"))):
@@ -197,7 +194,7 @@ class rsxshaderwriter(maxUsd.ShaderWriter):
         type = rt.classOf(value)
         
         if not (type in maxTypeToSdf):
-            print(str(Property), "has unsupported type conversion", str(type))
+            rt.UsdExporter.Log(rt.Name("warn"), (str(Property) + "has unsupported type conversion" + str(type)))
             return
             
         sdfType = maxTypeToSdf[type]
@@ -232,6 +229,8 @@ class rsxshaderwriter(maxUsd.ShaderWriter):
             Prim.CreateInput("offset_X", Sdf.ValueTypeNames.Float).Set(value.U_Offset)
             Prim.CreateInput("offset_Y", Sdf.ValueTypeNames.Float).Set(value.V_Offset)
             return
+        elif type == rt.BitMap:
+            return  #these get handled by tex0_filename
             
         if nodeClass in PropertyRemaps:
             if str(Property) in PropertyRemaps[nodeClass]:
@@ -251,7 +250,7 @@ class rsxshaderwriter(maxUsd.ShaderWriter):
         
         maxClass = rt.classOf(maxShader)
         if not (maxClass in maxShaderToRS):
-            print(str(maxClass), "is not supported, this node and any children will be skipped!")
+            rt.UsdExporter.Log(rt.Name("warn"), (str(maxClass) + "is not supported, this node and any children will be skipped!"))
             return
             
         outPutName = maxShaderToRS[maxClass][1]
