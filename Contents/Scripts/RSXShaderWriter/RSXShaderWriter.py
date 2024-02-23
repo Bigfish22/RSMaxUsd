@@ -34,7 +34,7 @@ maxShaderToRS = {rt.MultiOutputChannelTexmapToTexmap : ["", 'out'],
                 rt.rsMathAbsColor : ['RSMathAbsColor', 'outColor'],
                 rt.rsMathBiasColor : ['RSMathBiasColor', 'outColor'],
                 rt.rsColorRange : ['RSColorRange', 'out'],
-                rt.rsColorConstant : ['RSColorConstant', 'out'],
+                rt.rsColorConstant : ['RSColorConstant', 'outColor'],
                 rt.rsMathExpColor : ['RSMathExpColor', 'outColor'],
                 rt.rsMathGainColor : ['RSMathGainColor', 'outColor'],
                 rt.rsMathInvColor : ['RSMathInvertColor', 'out'],
@@ -181,7 +181,7 @@ class rsxshaderwriter(maxUsd.ShaderWriter):
             print(traceback.format_exc())
             
     def addProperty(self, Prim, Node, Property, template):
-        if(str(Property).endswith(("_map","_mapamount", "_mapenable", "_amount", "_enable", "_input"))):
+        if(str(Property).endswith(("_map","_mapamount", "_mapenable", "_enable", "_input"))):
             return
         
         nodeClass = rt.ClassOf(Node)
