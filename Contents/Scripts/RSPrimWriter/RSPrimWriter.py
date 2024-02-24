@@ -1,12 +1,13 @@
 import maxUsd
 from pymxs import runtime as rt
-from pxr import UsdGeom
+from pxr import UsdGeom, Sdf
 from pxr import UsdLux
 from pxr import Gf
 import pymxs
 import traceback
+import os
                                                                             #mesh lights are gonna be weird
-LightClasses = ["RectLight", "DiskLight", "SphereLight", "CylinderLight", "Xform", "DomeLight"]
+LightClasses = ["RectLight", "DiskLight", "SphereLight", "CylinderLight", "Xform", "DomeLightNoXform"]
 
 class RSLightWriter(maxUsd.PrimWriter):
 
@@ -21,12 +22,14 @@ class RSLightWriter(maxUsd.PrimWriter):
             opts = self.GetExportArgs()
             node = rt.maxOps.getNodeByHandle(nodeHandle)
             
-            lightPrim = UsdLux.RectLight(prim)
+            yUp = True
             
-            if prim.GetTypeName() == "DomeLight":
+            if prim.GetTypeName() == "DomeLightNoXform":
+                lightPrim = UsdLux.DomeLight.Define(stage, prim.GetPath())
                 lightPrim.CreateIntensityAttr(node.multiplier)
                 lightPrim.CreateExposureAttr(node.tex0_exposure)
             else:
+                lightPrim = UsdLux.RectLight(prim)
                 lightPrim.CreateIntensityAttr(node.intensity)
                 lightPrim.CreateExposureAttr(node.exposure)
                 if node.colorMode == 1:
@@ -48,16 +51,20 @@ class RSLightWriter(maxUsd.PrimWriter):
                 lightPrim = UsdLux.CylinderLight(prim)
                 lightPrim.CreateRadiusAttr(node.width)
                 lightPrim.CreateLengthAttr(node.length)
-            elif sprim.GetTypeName() == "Xform":
+            elif prim.GetTypeName() == "Xform":
                 print("Mesh Light Not Supported Yet")
             elif prim.GetTypeName() == "DomeLight":
                 lightPrim = UsdLux.DomeLight(prim)
                 hdriImage = node.tex0_filename
                 lightPrim.CreateTextureFileAttr(hdriImage)
-        
-                XformAcces = UsdGeom.Xformable(prim)
-                Flip = XformAcces.AddRotateXZYOp(opSuffix="axisChange")
-                Flip.Set(value = (90, 90, 0))
+                
+                maxXform = node.transform
+                XformAcces = UsdGeom.Xformable(prim) #maybe just make this work for y up...
+                xform = XformAcces.AddTransformOp(opSuffix="t1")
+                if yUp:
+                    lightTransform = Gf.Matrix4d()
+                                                 
+                xform.Set(lightTransform)
             
             return True
 
@@ -85,7 +92,44 @@ class RSLightWriter(maxUsd.PrimWriter):
             return maxUsd.PrimWriter.ContextSupport.Supported
         return maxUsd.PrimWriter.ContextSupport.Unsupported
 
+
+class RSProxyWriter(maxUsd.PrimWriter):
+    def GetPrimType(self):
+        return "RedshiftProxy"
+
+    def Write(self, prim, applyOffset, time):
+        try: 
+            nodeHandle = self.GetNodeHandle()
+            stage = prim.GetStage()
+            opts = self.GetExportArgs()
+            node = rt.maxOps.getNodeByHandle(nodeHandle)
+            
+            
+            prim.CreateAttribute("primvars:redshift:object:RS_objprop_proxy_file", Sdf.ValueTypeNames.String).Set(node.file.replace(os.sep, "/"))
+            prim.CreateAttribute("primvars:redshift:object:RS_objprop_proxy_ovrID", Sdf.ValueTypeNames.Bool).Set(node.overrideobjectid)
+            prim.CreateAttribute("primvars:redshift:object:RS_objprop_proxy_ovrTess", Sdf.ValueTypeNames.Bool).Set(node.overridetessdisp)
+            prim.CreateAttribute("primvars:redshift:object:RS_objprop_proxy_ovrTraceS", Sdf.ValueTypeNames.Bool).Set(node.overridetracesets)
+            prim.CreateAttribute("primvars:redshift:object:RS_objprop_proxy_ovrUserDat", Sdf.ValueTypeNames.Bool).Set(node.overrideuserdata)
+            prim.CreateAttribute("primvars:redshift:object:RS_objprop_proxy_ovrVis", Sdf.ValueTypeNames.Bool).Set(node.overridevisibility)
+            
+            
+            return True
+
+        except Exception as e:
+            # Quite useful to debug errors in a Python callback
+            print('Write() - Error: %s' % str(e))
+            print(traceback.format_exc())
+            return False
+
+    @classmethod
+    def CanExport(cls, nodeHandle, exportArgs):
+        node = rt.maxOps.getNodeByHandle(nodeHandle)
+        if rt.classOf(node) == rt.RedshiftProxy:
+            return maxUsd.PrimWriter.ContextSupport.Supported
+        return maxUsd.PrimWriter.ContextSupport.Unsupported
    
-# Register the writer.
-# First argument is the class, second argument is the Writer name, which will be used as an ID internaly.
+
+
 maxUsd.PrimWriter.Register(RSLightWriter, "RSLightWriter")
+maxUsd.PrimWriter.Register(RSProxyWriter, "RSProxyWriter")
+   

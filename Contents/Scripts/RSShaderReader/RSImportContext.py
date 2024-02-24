@@ -4,7 +4,7 @@
 #   - 'convertMaterialsTo'
 #
 # This sample will add a "Custom Context Demo" option in the "PlugIn configuration" drop down in maxUsd exports
-def RSShaderWriterContext():
+def RSShaderImporterContext():
     # build a dictionary of the options to set using the context
     extraArgs = {}
     
@@ -13,4 +13,5 @@ def RSShaderWriterContext():
 
 import maxUsd
 maxUsd.ShadingModeRegistry.RegisterImportConversion("RedshiftShaders", "Redshift", "Redshift Shaders", "import redshift usd materials")
+maxUsd.JobContextRegistry.RegisterImportJobContext("Redshift", "Redshift", "Custom plug-in configuration", RSShaderImporterContext)
 print("Import conversion registered?")

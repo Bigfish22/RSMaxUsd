@@ -1,0 +1,21 @@
+{
+    "Plugins":[
+      {
+        "Info":{
+            "MaxUsd":{
+                "PrimReader" : {
+                    "providesTranslator": [
+                        "UsdLuxRectLight",
+						"UsdLuxDiskLight",
+						"UsdLuxSphereLight",
+						"UsdLuxCylinderLight",
+                        "UsdRedshiftProxy"
+                    ]
+                }
+            }
+        },
+          "Name":"RSPrimReader",
+          "Type":"python"
+      }
+    ]
+}
