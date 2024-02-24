@@ -1,6 +1,6 @@
 import maxUsd
 from pymxs import runtime as rt
-from pxr import UsdGeom, Sdf
+from pxr import UsdGeom, Sdf, UsdVol
 from pxr import UsdLux
 from pxr import Gf
 import pymxs
@@ -93,6 +93,39 @@ class RSLightWriter(maxUsd.PrimWriter):
         return maxUsd.PrimWriter.ContextSupport.Unsupported
 
 
+class RSSunWriter(maxUsd.PrimWriter):
+    def GetPrimType(self):
+        return "DistantLight"
+        
+    def Write(self, prim, applyOffset, time):
+        try:
+            nodeHandle = self.GetNodeHandle()
+            stage = prim.GetStage()
+            opts = self.GetExportArgs()
+            node = rt.maxOps.getNodeByHandle(nodeHandle)
+            
+            lightPrim = UsdLux.DistantLight(prim)
+            lightPrim.CreateIntensityAttr(node.intensity)
+            
+            if rt.classOf(rt.environmentMap) == rt.rsPhysicalSky:
+                if rt.environmentMap.sun_node == node:
+                    prim.CreateAttribute("redshift:light:sunSkyLight", Sdf.ValueTypeNames.Bool).Set(rt.useEnvironmentMap) #just incase somebody wants there settings but its disabled at the time.
+            
+            return True
+            
+        except Exception as e:
+            # Quite useful to debug errors in a Python callback
+            print('Write() - Error: %s' % str(e))
+            print(traceback.format_exc())
+            return False
+            
+    @classmethod
+    def CanExport(cls, nodeHandle, exportArgs):
+        node = rt.maxOps.getNodeByHandle(nodeHandle)
+        if rt.classOf(node) == rt.rsSunLight:
+            return maxUsd.PrimWriter.ContextSupport.Supported
+        return maxUsd.PrimWriter.ContextSupport.Unsupported
+
 class RSProxyWriter(maxUsd.PrimWriter):
     def GetPrimType(self):
         return "RedshiftProxy"
@@ -127,9 +160,43 @@ class RSProxyWriter(maxUsd.PrimWriter):
         if rt.classOf(node) == rt.RedshiftProxy:
             return maxUsd.PrimWriter.ContextSupport.Supported
         return maxUsd.PrimWriter.ContextSupport.Unsupported
+        
+class RSVolumeWriter(maxUsd.PrimWriter):
+    def GetPrimType(self):
+        return "Volume"
+        
+    def Write(self, prim, applyOffset, time):
+        try: 
+            nodeHandle = self.GetNodeHandle()
+            stage = prim.GetStage()
+            opts = self.GetExportArgs()
+            node = rt.maxOps.getNodeByHandle(nodeHandle)
+            
+            volumePrim = UsdVol.Volume(prim)
+            for grid in node.grids:
+                vdbAsset = UsdVol.OpenVDBAsset.Define(stage, (prim.GetPath().AppendPath(grid)))
+                vdbAsset.CreateFilePathAttr(node.file)
+                vdbAsset.CreateFieldNameAttr(grid)
+                vdbAsset.CreateFieldIndexAttr(0)
+                volumePrim.CreateFieldRelationship(grid, vdbAsset.GetPath())
+            
+            return True
    
-
+        except Exception as e:
+            # Quite useful to debug errors in a Python callback
+            print('Write() - Error: %s' % str(e))
+            print(traceback.format_exc())
+            return False
+            
+    @classmethod
+    def CanExport(cls, nodeHandle, exportArgs):
+        node = rt.maxOps.getNodeByHandle(nodeHandle)
+        if rt.classOf(node) == rt.RedshiftVolumeGrid:
+            return maxUsd.PrimWriter.ContextSupport.Supported
+        return maxUsd.PrimWriter.ContextSupport.Unsupported
 
 maxUsd.PrimWriter.Register(RSLightWriter, "RSLightWriter")
+maxUsd.PrimWriter.Register(RSSunWriter, "RSSunWriter")
 maxUsd.PrimWriter.Register(RSProxyWriter, "RSProxyWriter")
+maxUsd.PrimWriter.Register(RSVolumeWriter, "RSVolumeWriter")
    

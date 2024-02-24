@@ -14,10 +14,11 @@ into:
 * export rs materials, maps and shader graphs
 * import rs materials, maps and shader graphs from usd into max
 * export rs lights as usd lights.
-* import rs lights as redshift. (prim reader must be manually loaded for now)
+* import usd lights as redshift lights. (prim reader must be manually loaded for now)
 * export rs proxies
 * import rs proxies
-* materials, lights and proxies exported will render within the redshift hydra delegate in solaris.
+* export rs Volumes to UsdVolume
+* materials, lights, Volumes and proxies exported will render within the redshift hydra delegate in solaris.
 
 ## Limitations
 * only supports rs nodes

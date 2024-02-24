@@ -164,7 +164,10 @@ class rsxshaderwriter(maxUsd.ShaderWriter):
             nodeShader = UsdShade.Shader.Define(self.GetUsdStage(), (self.GetUsdPath()))
             nodeShader.CreateIdAttr("redshift::" + maxShaderToRS[rt.classOf(material)][0])
             
-            surfaceShader.CreateInput('Surface', Sdf.ValueTypeNames.Token).ConnectToSource(nodeShader.ConnectableAPI(), "outColor")
+            if rt.classOf(material) == rt.rsVolume:
+                surfaceShader.CreateInput('Volume', Sdf.ValueTypeNames.Token).ConnectToSource(nodeShader.ConnectableAPI(), "outColor")
+            else:
+                surfaceShader.CreateInput('Surface', Sdf.ValueTypeNames.Token).ConnectToSource(nodeShader.ConnectableAPI(), "outColor")
             
             
             templateDef = rt.classOf(material)
