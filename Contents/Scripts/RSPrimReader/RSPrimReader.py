@@ -77,10 +77,10 @@ class RSDomeReader(maxUsd.PrimReader):
             lightPrim = UsdLux.DomeLight(usdPrim)
             node.multiplier = lightPrim.GetIntensityAttr().Get()
             node.tex0_exposure = lightPrim.GetExposureAttr().Get()
-            node.tex0_filename = lightPrim.GetTextureFileAttr(hdriImage).Get()
+            node.tex0_filename = lightPrim.GetTextureFileAttr().Get().path
 
             self.GetJobContext().RegisterCreatedNode(usdPrim.GetPath(), rt.GetHandleByAnim(node))
-            self.ReadXformable()
+            #self.ReadXformable()
             
             return True
 
@@ -140,6 +140,6 @@ maxUsd.PrimReader.Register(RSLightReader, "UsdLuxRectLight")
 maxUsd.PrimReader.Register(RSLightReader, "UsdLuxDiskLight")
 maxUsd.PrimReader.Register(RSLightReader, "UsdLuxSphereLight")
 maxUsd.PrimReader.Register(RSLightReader, "UsdLuxCylinderLight")
-maxUsd.PrimReader.Register(RSDomeReader, "DomeLight")
+maxUsd.PrimReader.Register(RSDomeReader, "UsdLuxDomeLight")
 
 maxUsd.PrimReader.Register(RSProxyPrimReader, "UsdRedshiftProxy")
