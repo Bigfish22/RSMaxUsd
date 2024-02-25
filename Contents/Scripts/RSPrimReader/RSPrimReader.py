@@ -1,13 +1,12 @@
 import maxUsd
 from pymxs import runtime as rt
-from pxr import UsdGeom, UsdLux
+from pxr import UsdGeom, UsdLux, UsdVol
 from pxr import Gf as pyGf
 import pymxs
 import traceback
 
 
 class RSLightReader(maxUsd.PrimReader):
-
     def Read(self):
         try: 
             usdPrim = self.GetUsdPrim()
@@ -28,7 +27,7 @@ class RSLightReader(maxUsd.PrimReader):
                 node.temperature = lightPrim.GetColorTemperatureAttr().Get()
             else:
                 lightColor = lightPrim.GetColorAttr().Get()
-                node.color = rt.point4(lightColor[0], lightColor[1], lightColor[2], 1)
+                node.color = rt.point4(lightColor[0]*255, lightColor[1]*255, lightColor[2]*255, 1)
                 
             if lightType == "RectLight":
                 node.width= lightPrim.GetWidthAttr().Get()
@@ -62,7 +61,8 @@ class RSLightReader(maxUsd.PrimReader):
     def CanImport(cls, args, prim):
         #Need to check if we are in a redshift import context.
         return maxUsd.PrimReader.ContextSupport.Supported
-        
+ 
+ 
 class RSDomeReader(maxUsd.PrimReader):
     def Read(self):
         try: 
@@ -94,7 +94,46 @@ class RSDomeReader(maxUsd.PrimReader):
     def CanImport(cls, args, prim):
         #Need to check if we are in a redshift import context.
         return maxUsd.PrimReader.ContextSupport.Supported
-
+   
+   
+class RSSunSkyReader(maxUsd.PrimReader):
+    def Read(self):
+        try:
+            usdPrim = self.GetUsdPrim()
+            node = rt.rsSunLight()
+            node.name = usdPrim.GetName()
+            
+            node.targeted = False
+            
+            #Basic light values
+            lightPrim = UsdLux.DistantLight(usdPrim)
+            node.intensity = lightPrim.GetIntensityAttr().Get()
+            
+            
+            #Build physical sky
+            SkyAttribute = usdPrim.GetAttribute("redshift:light:sunSkyLight")
+            if SkyAttribute:
+                if SkyAttribute.Get():
+                    PhysicalSky = rt.rsPhysicalSky()
+                    sun_node = node
+                    
+                    #Set all the sky properties on the light/and physical sky
+                    
+                    rt.environmentMap = PhysicalSky
+            
+            self.GetJobContext().RegisterCreatedNode(usdPrim.GetPath(), rt.GetHandleByAnim(node))
+            self.ReadXformable()
+            return True
+            
+        except Exception as e:
+            # Quite useful to debug errors in a Python callback
+            print('Read() - Error: %s' % str(e))
+            print(traceback.format_exc())
+            return False
+            
+    @classmethod
+    def CanImport(cls, args, prim):
+        return maxUsd.PrimReader.ContextSupport.Supported
 
 class RSProxyPrimReader(maxUsd.PrimReader):
     '''
@@ -134,6 +173,39 @@ class RSProxyPrimReader(maxUsd.PrimReader):
             print(traceback.format_exc())
             return False
    
+   
+class RSVolumeReader(maxUsd.PrimReader):
+    @classmethod
+    def CanImport(cls, args, prim):
+        return maxUsd.PrimReader.ContextSupport.Supported
+        
+    def Read(self):
+        try:
+            usdPrim = self.GetUsdPrim()
+            node = rt.RedshiftVolumeGrid()
+            node.name = usdPrim.GetName()
+            
+            UsdVolume = UsdVol.Volume(usdPrim)
+            gridDict = UsdVolume.GetFieldPaths()
+            for grid in gridDict:
+                VdbPrim = UsdVol.OpenVDBAsset(usdPrim.GetStage().GetPrimAtPath(gridDict[grid]))
+                node.file = VdbPrim.GetFilePathAttr().Get().path
+                break
+                
+            parentHandle = self.GetJobContext().GetNodeHandle(usdPrim.GetPath().GetParentPath(), False)
+            if (parentHandle):
+                parent=rt.GetAnimByHandle(parentHandle)
+            
+            self.GetJobContext().RegisterCreatedNode(usdPrim.GetPath(), rt.GetHandleByAnim(node))
+            self.ReadXformable()
+            
+            return True
+            
+        except Exception as e:
+            # Quite useful to debug errors in a Python callback
+            print('Read() - Error: %s' % str(e))
+            print(traceback.format_exc())
+            return False
 
 
 maxUsd.PrimReader.Register(RSLightReader, "UsdLuxRectLight")
@@ -141,5 +213,8 @@ maxUsd.PrimReader.Register(RSLightReader, "UsdLuxDiskLight")
 maxUsd.PrimReader.Register(RSLightReader, "UsdLuxSphereLight")
 maxUsd.PrimReader.Register(RSLightReader, "UsdLuxCylinderLight")
 maxUsd.PrimReader.Register(RSDomeReader, "UsdLuxDomeLight")
+maxUsd.PrimReader.Register(RSSunSkyReader, "UsdLuxDistantLight")
 
 maxUsd.PrimReader.Register(RSProxyPrimReader, "UsdRedshiftProxy")
+
+maxUsd.PrimReader.Register(RSVolumeReader, "UsdVolVolume")
