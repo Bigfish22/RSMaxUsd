@@ -19,11 +19,13 @@
            pluginPath = pluginPath + "\\plugInfo.json"
            -- The plugin script location must part of the Python path
            pysys.path.insert 0 (pathConfig.removePathLeaf pluginPath)
-		   
-		   print(pluginPath)
        
            plugRegistry = pyUsdPlug.Registry()
            plugRegistry.RegisterPlugins pluginPath
+		   local maxUsd = Python.Import("maxUsd")
+			if isProperty maxUsd #JobContextRegistry then (
+				python.Execute "import RSPrimReader"
+			)
        )
        
        addRSXShaderWriterPlugin()
