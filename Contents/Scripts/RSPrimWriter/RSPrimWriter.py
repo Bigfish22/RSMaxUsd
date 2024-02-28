@@ -22,49 +22,52 @@ class RSLightWriter(maxUsd.PrimWriter):
             opts = self.GetExportArgs()
             node = rt.maxOps.getNodeByHandle(nodeHandle)
             
+            usdTime = time.GetUsdTime()
+            maxTime = time.GetMaxTime()
+            
             yUp = True
-            
-            if prim.GetTypeName() == "DomeLightNoXform":
-                lightPrim = UsdLux.DomeLight.Define(stage, prim.GetPath())
-                lightPrim.CreateIntensityAttr(node.multiplier)
-                lightPrim.CreateExposureAttr(node.tex0_exposure)
-            else:
-                lightPrim = UsdLux.RectLight(prim)
-                lightPrim.CreateIntensityAttr(node.intensity)
-                lightPrim.CreateExposureAttr(node.exposure)
-                if node.colorMode == 1:
-                    lightPrim.CreateEnableColorTemperatureAttr(True)
-                lightPrim.CreateColorTemperatureAttr(node.temperature)
-            lightPrim.CreateColorAttr((node.color.r/255, node.color.g/255, node.color.b/255))
-            
-            #can probably do this better
-            if prim.GetTypeName() == "RectLight":
-                lightPrim.CreateWidthAttr(node.width)
-                lightPrim.CreateHeightAttr(node.length)
-            elif prim.GetTypeName() == "DiskLight":
-                lightPrim = UsdLux.DiskLight(prim)
-                lightPrim.CreateRadiusAttr(node.width)
-            elif prim.GetTypeName() == "SphereLight":
-                lightPrim = UsdLux.SphereLight(prim)
-                lightPrim.CreateRadiusAttr(node.width)
-            elif prim.GetTypeName() == "CylinderLight":
-                lightPrim = UsdLux.CylinderLight(prim)
-                lightPrim.CreateRadiusAttr(node.width)
-                lightPrim.CreateLengthAttr(node.length)
-            elif prim.GetTypeName() == "Xform":
-                print("Mesh Light Not Supported Yet")
-            elif prim.GetTypeName() == "DomeLight":
-                lightPrim = UsdLux.DomeLight(prim)
-                hdriImage = node.tex0_filename
-                lightPrim.CreateTextureFileAttr(hdriImage)
+            with pymxs.attime(maxTime):
+                if prim.GetTypeName() == "DomeLightNoXform":
+                    lightPrim = UsdLux.DomeLight.Define(stage, prim.GetPath())
+                    WriteProperty(lightPrim.CreateIntensityAttr(), node, "multiplier", usdTime)
+                    WriteProperty(lightPrim.CreateExposureAttr(), node, "tex0_exposure", usdTime)
+                else:
+                    lightPrim = UsdLux.RectLight(prim)
+                    WriteProperty(lightPrim.CreateIntensityAttr(), node, "intensity", usdTime)
+                    WriteProperty(lightPrim.CreateExposureAttr(), node, "exposure", usdTime)
+                    if node.colorMode == 1:
+                        lightPrim.CreateEnableColorTemperatureAttr(True)
+                    WriteProperty(lightPrim.CreateColorTemperatureAttr(), node, "temperature", usdTime)
+                WritePropertyColor(lightPrim.CreateColorAttr(), node, "color", usdTime)
                 
-                maxXform = node.transform
-                XformAcces = UsdGeom.Xformable(prim) #maybe just make this work for y up...
-                xform = XformAcces.AddTransformOp(opSuffix="t1")
-                if yUp:
-                    lightTransform = Gf.Matrix4d()
-                                                 
-                xform.Set(lightTransform)
+                #can probably do this better
+                if prim.GetTypeName() == "RectLight":
+                    WriteProperty(lightPrim.CreateWidthAttr(), node, "width", usdTime)
+                    WriteProperty(lightPrim.CreateHeightAttr(),node, "length", usdTime)
+                elif prim.GetTypeName() == "DiskLight":
+                    lightPrim = UsdLux.DiskLight(prim)
+                    WriteProperty(lightPrim.CreateRadiusAttr(). node, "width", usdTime)
+                elif prim.GetTypeName() == "SphereLight":
+                    lightPrim = UsdLux.SphereLight(prim)
+                    WriteProperty(lightPrim.CreateRadiusAttr(), node, "width", usdTime)
+                elif prim.GetTypeName() == "CylinderLight":
+                    lightPrim = UsdLux.CylinderLight(prim)
+                    WriteProperty(lightPrim.CreateRadiusAttr(), node, "width", usdTime)
+                    WriteProperty(lightPrim.CreateLengthAttr(), node, "length", usdTime)
+                elif prim.GetTypeName() == "Xform":
+                    print("Mesh Light Not Supported Yet")
+                elif prim.GetTypeName() == "DomeLight":
+                    lightPrim = UsdLux.DomeLight(prim)
+                    hdriImage = node.tex0_filename
+                    lightPrim.CreateTextureFileAttr(hdriImage)
+                    
+                    maxXform = node.transform
+                    XformAcces = UsdGeom.Xformable(prim) #maybe just make this work for y up...
+                    xform = XformAcces.AddTransformOp(opSuffix="t1")
+                    if yUp:
+                        lightTransform = Gf.Matrix4d()
+                                                     
+                    xform.Set(lightTransform)
             
             return True
 
@@ -104,8 +107,12 @@ class RSSunWriter(maxUsd.PrimWriter):
             opts = self.GetExportArgs()
             node = rt.maxOps.getNodeByHandle(nodeHandle)
             
+            usdTime = time.GetUsdTime()
+            maxTime = time.GetMaxTime()
+            
             lightPrim = UsdLux.DistantLight(prim)
-            lightPrim.CreateIntensityAttr(node.intensity)
+            with pymxs.attime(maxTime):
+                WriteProperty(lightPrim.CreateIntensityAttr(), node, "intensity", usdTime)
             
             if rt.classOf(rt.environmentMap) == rt.rsPhysicalSky:
                 if rt.environmentMap.sun_node == node:
@@ -194,6 +201,22 @@ class RSVolumeWriter(maxUsd.PrimWriter):
         if rt.classOf(node) == rt.RedshiftVolumeGrid:
             return maxUsd.PrimWriter.ContextSupport.Supported
         return maxUsd.PrimWriter.ContextSupport.Unsupported
+
+
+def WriteProperty(usdAttribute, maxNode, maxProperty, usdTime):
+    if rt.getPropertyController(maxNode, maxProperty):
+        usdAttribute.Set(getattr(maxNode, maxProperty), usdTime)
+    else:
+        usdAttribute.Set(getattr(maxNode, maxProperty))
+        
+def WritePropertyColor(usdAttribute, maxNode, maxProperty, usdTime):
+    if rt.getPropertyController(maxNode, maxProperty):
+        value = getattr(maxNode, maxProperty)
+        usdAttribute.Set((value.r/255, value.g/255, value.b/255), usdTime)
+    else:
+        value = getattr(maxNode, maxProperty)
+        usdAttribute.Set((value.r/255, value.g/255, value.b/255))
+
 
 maxUsd.PrimWriter.Register(RSLightWriter, "RSLightWriter")
 maxUsd.PrimWriter.Register(RSSunWriter, "RSSunWriter")
