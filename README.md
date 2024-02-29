@@ -28,5 +28,4 @@ into:
 * no ramp or composite support
 * legacy rs nodes are not supported (rs material, rs normal etc)
 * displacement in blend materials is not yet supported.
-* animated materials will not export keys
 * cylinder light and dome light rotation will be incorrect.

@@ -147,6 +147,11 @@ class rsxshaderwriter(maxUsd.ShaderWriter):
             isMultiTarget = len(self.GetExportArgs().GetAllMaterialConversions()) > 1
             
             exportSettings = self.GetExportArgs() #TODO: Get animation start, end and interval, for getting animated values from properties
+            self.startTime = exportSettings.GetStartFrame()
+            self.endTime   = exportSettings.GetEndFrame()
+            self.timeStep  = exportSettings.GetSamplesPerFrame()
+            self.animationMode = exportSettings.GetTimeMode()
+            
             
             surfaceShader = UsdShade.Shader.Define(self.GetUsdStage(), ((self.GetUsdPath()).GetParentPath()).AppendPath("redshift_usd_material1"))
             surfaceShader.CreateIdAttr("redshift_usd_material")
@@ -190,9 +195,12 @@ class rsxshaderwriter(maxUsd.ShaderWriter):
         nodeClass = rt.ClassOf(Node)
         
         value = getattr(Node, str(Property))
+        animated = False
+        if rt.getPropertyController(Node, str(Property)):
+            animated = True
         if not (nodeClass == rt.rsOSLMap):
-            if value == getattr(template, str(Property)): #TODO: This should also check if a value is animated, if its animated we should probably write its values.
-                return #The property is still at its defualt value, so we can just skip doing anything with it
+            if value == getattr(template, str(Property)) and not animated: #TODO: This should also check if a value is animated, if its animated we should probably write its values.
+                return #The property is still at its defualt value and it is not animated, so we can just skip doing anything with it
             
         type = rt.classOf(value)
         
@@ -202,45 +210,72 @@ class rsxshaderwriter(maxUsd.ShaderWriter):
             
         sdfType = maxTypeToSdf[type]
         
+        value = self.resolveValue(Prim, type, value, Property, Node)
+        if value is None:
+            return
+        
+        propertyName = str(Property)
+        if nodeClass in PropertyRemaps:
+            if str(Property) in PropertyRemaps[nodeClass]:
+                propertyName = PropertyRemaps[nodeClass][str(Property)]
+                
+        inputAttribute = Prim.CreateInput(propertyName, sdfType)
+        if not animated or self.animationMode == maxUsd.TimeMode.CurrentFrame:
+            inputAttribute.Set(value)
+        else:
+            currentStep = self.startTime
+            while currentStep < self.endTime:
+                with pymxs.attime(currentStep):
+                    value = getattr(Node, str(Property))
+                value = self.resolveValue(Prim, type, value, Property, Node)
+                inputAttribute.Set(value, currentStep)
+                currentStep += 1 / self.timeStep
+    
+    def resolveValue(self, prim, type, value, Property, Node):
         if type == rt.Color:
             value = (value.r/255, value.g/255, value.b/255)
         elif type == rt.point3:
             value = Gf.Vec3f(value.x, value.y, value.z)
+        elif type == rt.Double or type == rt.Integer or type == rt.BooleanClass:
+            return value
         elif type == rt.string:
-            #is it a filepath? if so we need to store it as an asset. Relative file paths don't seem to resolve, need to work out how works.
-            if re.search("\....$", value):
-                assetPath = self.relativeAssetPath(value)
-                propertyName = str(Property)
-                if propertyName == "tex0_filename":
-                    propertyName = "tex0"
-                    try:  #sprites dont have tiling mode, classic stitch up there
-                        if getattr(Node, "tilingmode") == 1:
-                            assetPath = re.sub("1[0-9]{3}", "<UDIM>", assetPath)
-                    except:
-                        pass
-                if nodeClass in PropertyRemaps:
-                    if str(Property) in PropertyRemaps[nodeClass]:
-                        propertyName = PropertyRemaps[nodeClass][str(Property)]
-                        Prim.CreateInput(propertyName, Sdf.ValueTypeNames.Asset).Set(assetPath)
-                        return
-                Prim.CreateInput(propertyName, Sdf.ValueTypeNames.Asset).Set(assetPath)
-                return
-        elif type == rt.StandardUVGen: #partial support for bitmap uv settings even though it doesn't match rstexture/texturesampler
-            Prim.CreateInput("scale_x", Sdf.ValueTypeNames.Float).Set(value.U_Tiling)
-            Prim.CreateInput("scale_y", Sdf.ValueTypeNames.Float).Set(value.V_Tiling)
-            Prim.CreateInput("Rotate", Sdf.ValueTypeNames.Float).Set(value.W_Angle)
-            Prim.CreateInput("offset_X", Sdf.ValueTypeNames.Float).Set(value.U_Offset)
-            Prim.CreateInput("offset_Y", Sdf.ValueTypeNames.Float).Set(value.V_Offset)
-            return
+            self.resolveString(prim, value, Property, Node)
+            value = None
+        elif type == rt.StandardUVGen:
+            self.resolveUVGen(prim, value)
+            value = None
         elif type == rt.BitMap:
-            return  #these get handled by tex0_filename
+            value = None
+        return value
             
-        if nodeClass in PropertyRemaps:
-            if str(Property) in PropertyRemaps[nodeClass]:
-                propertyName = PropertyRemaps[nodeClass][str(Property)]
-                Prim.CreateInput(propertyName, sdfType).Set(value)
-                return
-        Prim.CreateInput(str(Property), sdfType).Set(value)
+    def resolveString(self, prim, value, Property, Node):
+        #is it a filepath? if so we need to store it as an asset. Relative file paths don't seem to resolve, need to work out how works.
+        if re.search("\....$", value):
+            assetPath = self.relativeAssetPath(value)
+            propertyName = str(Property)
+            if propertyName == "tex0_filename":
+                propertyName = "tex0"
+                try:  #sprites dont have tiling mode, classic stitch up there
+                    if getattr(Node, "tilingmode") == 1:
+                        assetPath = re.sub("1[0-9]{3}", "<UDIM>", assetPath)
+                except:
+                    pass
+            if rt.ClassOf(Node) in PropertyRemaps:
+                if str(Property) in PropertyRemaps[nodeClass]:
+                    propertyName = PropertyRemaps[nodeClass][str(Property)]
+                    prim.CreateInput(propertyName, Sdf.ValueTypeNames.Asset).Set(assetPath)
+                    return
+            prim.CreateInput(propertyName, Sdf.ValueTypeNames.Asset).Set(assetPath)
+        else:
+            print(str(Property))
+            prim.CreateInput(str(Property), Sdf.ValueTypeNames.String).Set(value)
+    
+    def resolveUVGen(self, prim, value):
+        prim.CreateInput("scale_x", Sdf.ValueTypeNames.Float).Set(value.U_Tiling)
+        prim.CreateInput("scale_y", Sdf.ValueTypeNames.Float).Set(value.V_Tiling)
+        prim.CreateInput("Rotate", Sdf.ValueTypeNames.Float).Set(value.W_Angle)
+        prim.CreateInput("offset_X", Sdf.ValueTypeNames.Float).Set(value.U_Offset)
+        prim.CreateInput("offset_Y", Sdf.ValueTypeNames.Float).Set(value.V_Offset)
         
     def addShader(self, parentPrim, parentNode, Property):
         if not (str(Property)).endswith(("_map", "p_input")): #TODO: should probably just be checking if this is a textureMap class, this will catch undefined and properties, assuming superClassOf doesn't fail for undefined.
