@@ -26,6 +26,7 @@
 		   local maxUsd = Python.Import("maxUsd")
 			if isProperty maxUsd #JobContextRegistry then (
 				python.Execute "import RSXContext"
+                python.Execute "import RSObjectPropsChaser"
 		)
        )
        

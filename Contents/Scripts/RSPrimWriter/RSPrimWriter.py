@@ -4,13 +4,13 @@ from pxr import UsdGeom, Sdf, UsdVol
 from pxr import UsdLux
 from pxr import Gf
 import pymxs
+import usd_utils
 import traceback
 import os
                                                                             #mesh lights are gonna be weird
 LightClasses = ["RectLight", "DiskLight", "SphereLight", "CylinderLight", "Xform", "DomeLightNoXform"]
 
 class RSLightWriter(maxUsd.PrimWriter):
-
     def GetPrimType(self):
         lightType = LightClasses[self.lightType]
         return lightType
@@ -46,7 +46,7 @@ class RSLightWriter(maxUsd.PrimWriter):
                     WriteProperty(lightPrim.CreateHeightAttr(),node, "length", usdTime)
                 elif prim.GetTypeName() == "DiskLight":
                     lightPrim = UsdLux.DiskLight(prim)
-                    WriteProperty(lightPrim.CreateRadiusAttr(). node, "width", usdTime)
+                    WriteProperty(lightPrim.CreateRadiusAttr(), node, "width", usdTime)
                 elif prim.GetTypeName() == "SphereLight":
                     lightPrim = UsdLux.SphereLight(prim)
                     WriteProperty(lightPrim.CreateRadiusAttr(), node, "width", usdTime)
@@ -59,7 +59,7 @@ class RSLightWriter(maxUsd.PrimWriter):
                 elif prim.GetTypeName() == "DomeLight":
                     lightPrim = UsdLux.DomeLight(prim)
                     hdriImage = node.tex0_filename
-                    lightPrim.CreateTextureFileAttr(hdriImage)
+                    lightPrim.CreateTextureFileAttr(usd_utils.safe_relpath(hdriImage,os.path.dirname(self.GetFilename())))
                     
                     maxXform = node.transform
                     XformAcces = UsdGeom.Xformable(prim) #maybe just make this work for y up...
@@ -125,6 +125,9 @@ class RSSunWriter(maxUsd.PrimWriter):
             print('Write() - Error: %s' % str(e))
             print(traceback.format_exc())
             return False
+
+    def GetValidityInterval(self, timeFrame):
+        return maxUsd.Interval(timeFrame,timeFrame)
             
     @classmethod
     def CanExport(cls, nodeHandle, exportArgs):
@@ -144,8 +147,9 @@ class RSProxyWriter(maxUsd.PrimWriter):
             opts = self.GetExportArgs()
             node = rt.maxOps.getNodeByHandle(nodeHandle)
             
+            proxyPath = usd_utils.safe_relpath(node.file, os.path.dirname(self.GetFilename()))
             
-            prim.CreateAttribute("primvars:redshift:object:RS_objprop_proxy_file", Sdf.ValueTypeNames.String).Set(node.file.replace(os.sep, "/"))
+            prim.CreateAttribute("primvars:redshift:object:RS_objprop_proxy_file", Sdf.ValueTypeNames.String).Set(proxyPath.replace(os.sep, "/"))
             prim.CreateAttribute("primvars:redshift:object:RS_objprop_proxy_ovrID", Sdf.ValueTypeNames.Bool).Set(node.overrideobjectid)
             prim.CreateAttribute("primvars:redshift:object:RS_objprop_proxy_ovrTess", Sdf.ValueTypeNames.Bool).Set(node.overridetessdisp)
             prim.CreateAttribute("primvars:redshift:object:RS_objprop_proxy_ovrTraceS", Sdf.ValueTypeNames.Bool).Set(node.overridetracesets)
@@ -182,7 +186,8 @@ class RSVolumeWriter(maxUsd.PrimWriter):
             volumePrim = UsdVol.Volume(prim)
             for grid in node.grids:
                 vdbAsset = UsdVol.OpenVDBAsset.Define(stage, (prim.GetPath().AppendPath(grid)))
-                vdbAsset.CreateFilePathAttr(node.file)
+                vdbFilePath = usd_utils.safe_relpath(node.file, os.path.dirname(self.GetFilename()))
+                vdbAsset.CreateFilePathAttr(vdbFilePath)
                 vdbAsset.CreateFieldNameAttr(grid)
                 vdbAsset.CreateFieldIndexAttr(0)
                 volumePrim.CreateFieldRelationship(grid, vdbAsset.GetPath())

@@ -18,6 +18,7 @@ into:
 * export rs proxies
 * import rs proxies
 * export rs Volumes to UsdVolume
+* export rs mesh params and object properties
 * materials, lights, Volumes and proxies exported will render within the redshift hydra delegate in solaris.
 
 ## Limitations

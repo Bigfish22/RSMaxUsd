@@ -1,4 +1,5 @@
 import maxUsd
+import usd_utils
 from pymxs import runtime as rt
 from pxr import UsdShade, Sdf, Gf
 import usd_utils
@@ -250,6 +251,7 @@ class rsxshaderwriter(maxUsd.ShaderWriter):
             
     def resolveString(self, prim, value, Property, Node):
         #is it a filepath? if so we need to store it as an asset. Relative file paths don't seem to resolve, need to work out how works.
+        directory = os.path.dirname(self.GetFilename())
         if re.search("\....$", value):
             assetPath = self.relativeAssetPath(value)
             propertyName = str(Property)
@@ -264,11 +266,12 @@ class rsxshaderwriter(maxUsd.ShaderWriter):
                 if str(Property) in PropertyRemaps[nodeClass]:
                     propertyName = PropertyRemaps[nodeClass][str(Property)]
                     prim.CreateInput(propertyName, Sdf.ValueTypeNames.Asset).Set(assetPath)
+
                     return
             prim.CreateInput(propertyName, Sdf.ValueTypeNames.Asset).Set(assetPath)
         else:
-            print(str(Property))
             prim.CreateInput(str(Property), Sdf.ValueTypeNames.String).Set(value)
+
     
     def resolveUVGen(self, prim, value):
         prim.CreateInput("scale_x", Sdf.ValueTypeNames.Float).Set(value.U_Tiling)
@@ -330,13 +333,9 @@ class rsxshaderwriter(maxUsd.ShaderWriter):
                 self.addShader(usdShader, maxShader, shaderProperty)
         
     def relativeAssetPath(self, path):
-        #This doesn't seem to resolve in houdini and I dont handle it on import, so leaving it as full file paths for now.
-        """
-        exportFolder = os.path.dirname(self.GetFilename())
-        if exportFolder in path:
-            return path.replace(exportFolder + "\\", "../").replace(os.sep, "/")
-        """
-        return path.replace(os.sep, "/")
+        relPath = rt.pathConfig.convertPathToAbsolute(path)
+        relPath = usd_utils.safe_relpath(relPath, os.path.dirname(self.GetFilename()))
+        return relPath.replace(os.sep, "/")
         
     def addDisplacement(self, material, surfacePrim):
         if rt.classOf(material) not in [rt.rsStandardMaterial, rt.rsMaterialBlender, rt.rsSprite, rt.rsIncandescent]:
