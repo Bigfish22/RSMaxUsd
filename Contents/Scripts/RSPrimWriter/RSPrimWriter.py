@@ -35,10 +35,17 @@ class RSLightWriter(maxUsd.PrimWriter):
                     lightPrim = UsdLux.RectLight(prim)
                     WriteProperty(lightPrim.CreateIntensityAttr(), node, "intensity", usdTime)
                     WriteProperty(lightPrim.CreateExposureAttr(), node, "exposure", usdTime)
+                    prim.CreateAttribute('redshift:light:RSL_visible', Sdf.ValueTypeNames.Bool).Set(node.areavisible)
+                    prim.CreateAttribute('redshift:light:RSL_bidirectional', Sdf.ValueTypeNames.Bool).Set(node.areabidirectional)
+                    prim.CreateAttribute('redshift:light:RSL_spread', Sdf.ValueTypeNames.Float).Set(node.areaspread)
+                    lightPrim.CreateNormalizeAttr().Set(node.areanormalize)
                     if node.colorMode == 1:
                         lightPrim.CreateEnableColorTemperatureAttr(True)
                     WriteProperty(lightPrim.CreateColorTemperatureAttr(), node, "temperature", usdTime)
                 WritePropertyColor(lightPrim.CreateColorAttr(), node, "color", usdTime)
+                
+                lightPrim.CreateDiffuseAttr().Set(node.diffusescale)
+                lightPrim.CreateSpecularAttr().Set(node.reflectionscale)
                 
                 #can probably do this better
                 if prim.GetTypeName() == "RectLight":
@@ -54,6 +61,7 @@ class RSLightWriter(maxUsd.PrimWriter):
                     lightPrim = UsdLux.CylinderLight(prim)
                     WriteProperty(lightPrim.CreateRadiusAttr(), node, "width", usdTime)
                     WriteProperty(lightPrim.CreateLengthAttr(), node, "length", usdTime)
+                    lightPrim.AddRotateZOp().Set(90)
                 elif prim.GetTypeName() == "Xform":
                     print("Mesh Light Not Supported Yet")
                 elif prim.GetTypeName() == "DomeLight":
@@ -61,14 +69,35 @@ class RSLightWriter(maxUsd.PrimWriter):
                     hdriImage = node.tex0_filename
                     lightPrim.CreateTextureFileAttr(usd_utils.safe_relpath(hdriImage,os.path.dirname(self.GetFilename())))
                     
-                    maxXform = node.transform
-                    XformAcces = UsdGeom.Xformable(prim) #maybe just make this work for y up...
-                    xform = XformAcces.AddTransformOp(opSuffix="t1")
-                    if yUp:
-                        lightTransform = Gf.Matrix4d()
-                                                     
-                    xform.Set(lightTransform)
-            
+                    lightPrim.AddRotateYOp().Set(node.rotation.angle + 90)
+                    lightPrim.AddTransformOp(opSuffix="t1").Set(Gf.Matrix4d())
+            if prim.GetTypeName() != "DomeLight":        
+                prim.CreateAttribute('redshift:light:RSL_matteShadow', Sdf.ValueTypeNames.Bool).Set(node.matteshadowilluminator)
+                prim.CreateAttribute('redshift:light:RSL_affectedByRefraction', Sdf.ValueTypeNames.Int).Set(node.affectedbyrefraction)
+                prim.CreateAttribute('redshift:light:RSL_indirectMaxTraceDepth', Sdf.ValueTypeNames.Int).Set(node.indirectmaxtracedepth)
+                prim.CreateAttribute('redshift:light:RSL_transmissionScale', Sdf.ValueTypeNames.Float).Set(node.transmissionscale)
+                prim.CreateAttribute('redshift:light:RSL_sssScale', Sdf.ValueTypeNames.Float).Set(node.singlescatteringscale)
+                prim.CreateAttribute('redshift:light:RSL_multisssScale', Sdf.ValueTypeNames.Float).Set(node.multiplescatteringscale)
+                prim.CreateAttribute('redshift:light:RSL_indirectScale', Sdf.ValueTypeNames.Float).Set(node.indirectscale)
+                prim.CreateAttribute('redshift:light:RSL_volumeScale', Sdf.ValueTypeNames.Float).Set(node.volumecontributionscale)
+                prim.CreateAttribute('redshift:light:RSL_volumeSamples', Sdf.ValueTypeNames.Int).Set(node.volumesamples)
+                if node.aovLightGroup:
+                    prim.CreateAttribute('redshift:light:RSL_lightGroup', Sdf.ValueTypeNames.String).Set(node.aovLightGroup)
+                prim.CreateAttribute('redshift:light:RSL_samples', Sdf.ValueTypeNames.Int).Set(node.areasamples)
+                prim.CreateAttribute('redshift:light:RSL_emitCausticPhotons', Sdf.ValueTypeNames.Bool).Set(node.causticphotonemit)
+                prim.CreateAttribute('redshift:light:RSL_causticIntensity', Sdf.ValueTypeNames.Float).Set(node.causticphotonmultiplier)
+                prim.CreateAttribute('redshift:light:RSL_causticPhotons', Sdf.ValueTypeNames.Int).Set(node.causticphotoncount)
+                #prim.CreateAttribute('redshift:light:RSL_emitGIPhotons', Sdf.ValueTypeNames.Bool).Set(node.  ???
+                #prim.CreateAttribute('redshift:light:RSL_giIntensity', Sdf.ValueTypeNames.Float).Set(node.   ???
+                #prim.CreateAttribute('redshift:light:RSL_giPhotons', Sdf.ValueTypeNames.Int).Set(node.       ???
+                prim.CreateAttribute('redshift:light:RSL_softnessAffectsGobo', Sdf.ValueTypeNames.Int).Set(node.softnessAffectsGobo)
+                prim.CreateAttribute('redshift:light:SetEnableLegacyNonAreaLightIntensity', Sdf.ValueTypeNames.Bool).Set(node.legacyNonAreaLightIntensity)
+                prim.CreateAttribute('redshift:light:SetEnableLegacySoftShadowTechnique', Sdf.ValueTypeNames.Bool).Set(node.legacySoftShadowTechnique)
+                
+                prim.CreateAttribute('redshift:light:unitsType', Sdf.ValueTypeNames.Bool).Set(node.unitsType)
+                prim.CreateAttribute('redshift:light:lumensperwatt', Sdf.ValueTypeNames.Float).Set(node.lumensperwatt)
+                
+                
             return True
 
         except Exception as e:
@@ -147,9 +176,7 @@ class RSProxyWriter(maxUsd.PrimWriter):
             opts = self.GetExportArgs()
             node = rt.maxOps.getNodeByHandle(nodeHandle)
             
-            proxyPath = usd_utils.safe_relpath(node.file, os.path.dirname(self.GetFilename()))
-            
-            prim.CreateAttribute("primvars:redshift:object:RS_objprop_proxy_file", Sdf.ValueTypeNames.String).Set(proxyPath.replace(os.sep, "/"))
+            prim.CreateAttribute("primvars:redshift:object:RS_objprop_proxy_file", Sdf.ValueTypeNames.String).Set(node.file)
             prim.CreateAttribute("primvars:redshift:object:RS_objprop_proxy_ovrID", Sdf.ValueTypeNames.Bool).Set(node.overrideobjectid)
             prim.CreateAttribute("primvars:redshift:object:RS_objprop_proxy_ovrTess", Sdf.ValueTypeNames.Bool).Set(node.overridetessdisp)
             prim.CreateAttribute("primvars:redshift:object:RS_objprop_proxy_ovrTraceS", Sdf.ValueTypeNames.Bool).Set(node.overridetracesets)
