@@ -14,7 +14,8 @@ maxTypeToSdf = {rt.Double : Sdf.ValueTypeNames.Float,
                 rt.string : Sdf.ValueTypeNames.String,
                 rt.point3 : Sdf.ValueTypeNames.Float3,
                 rt.StandardUVGen : Sdf.ValueTypeNames.Token,
-                rt.BitMap : Sdf.ValueTypeNames.Token}
+                rt.BitMap : Sdf.ValueTypeNames.Token,
+                rt.point2 : Sdf.ValueTypeNames.Float2}
                     
 #Key: maxClass : [Houdini/core Name, Output Pin Name(if the node has multi outputs, we can get this from max]
 maxShaderToRS = {rt.MultiOutputChannelTexmapToTexmap : ["", 'out'],
@@ -138,7 +139,8 @@ maxShaderToRS = {rt.MultiOutputChannelTexmapToTexmap : ["", 'out'],
                 rt.rsStoreColorToAOV : ['StoreColorToAOV', 'outColor'],
                 rt.rsColorCorrection : ['RSColorCorrection', 'outColor']}
                     
-PropertyRemaps = {rt.rsOSLMap : {'OSLCode':'RS_osl_code', 'oslFilename':'RS_osl_file', 'oslSource':'RS_osl_source'}}
+PropertyRemaps = {rt.rsOSLMap : {'OSLCode':'RS_osl_code', 'oslFilename':'RS_osl_file', 'oslSource':'RS_osl_source'},
+                  rt.rsTexture: {"scale_x" : "scale", "scale_y": "scale", "offset_x" : "offset", "offset_y" : "offset"}}
 
 
 class rsxshaderwriter(maxUsd.ShaderWriter):
@@ -209,11 +211,12 @@ class rsxshaderwriter(maxUsd.ShaderWriter):
             rt.UsdExporter.Log(rt.Name("warn"), (str(Property) + "has unsupported type conversion" + str(type)))
             return
             
-        sdfType = maxTypeToSdf[type]
         
         value = self.resolveValue(Prim, type, value, Property, Node)
         if value is None:
             return
+            
+        sdfType = maxTypeToSdf[self.type]
         
         propertyName = str(Property)
         if nodeClass in PropertyRemaps:
@@ -233,12 +236,11 @@ class rsxshaderwriter(maxUsd.ShaderWriter):
                 currentStep += 1 / self.timeStep
     
     def resolveValue(self, prim, type, value, Property, Node):
+        self.type = type
         if type == rt.Color:
             value = (value.r/255, value.g/255, value.b/255)
         elif type == rt.point3:
             value = Gf.Vec3f(value.x, value.y, value.z)
-        elif type == rt.Double or type == rt.Integer or type == rt.BooleanClass:
-            return value
         elif type == rt.string:
             self.resolveString(prim, value, Property, Node)
             value = None
@@ -247,11 +249,15 @@ class rsxshaderwriter(maxUsd.ShaderWriter):
             value = None
         elif type == rt.BitMap:
             value = None
+        elif rt.classof(Node) == rt.rsTexture and str(Property).endswith(('_x', '_y')):
+            value = Gf.Vec2f(getattr(Node, str(Property)[:-2] + '_x'), getattr(Node, str(Property)[:-2] + '_y'))
+            self.type = rt.point2
         return value
             
     def resolveString(self, prim, value, Property, Node):
         #is it a filepath? if so we need to store it as an asset. Relative file paths don't seem to resolve, need to work out how works.
         directory = os.path.dirname(self.GetFilename())
+        nodeClass = rt.classOf(Node)
         if re.search("\....$", value):
             assetPath = self.relativeAssetPath(value)
             propertyName = str(Property)
@@ -274,11 +280,9 @@ class rsxshaderwriter(maxUsd.ShaderWriter):
 
     
     def resolveUVGen(self, prim, value):
-        prim.CreateInput("scale_x", Sdf.ValueTypeNames.Float).Set(value.U_Tiling)
-        prim.CreateInput("scale_y", Sdf.ValueTypeNames.Float).Set(value.V_Tiling)
+        prim.CreateInput("scale", Sdf.ValueTypeNames.Float2).Set(Gf.Vec2f(value.U_Tiling, value.V_Tiling))
         prim.CreateInput("Rotate", Sdf.ValueTypeNames.Float).Set(value.W_Angle)
-        prim.CreateInput("offset_X", Sdf.ValueTypeNames.Float).Set(value.U_Offset)
-        prim.CreateInput("offset_Y", Sdf.ValueTypeNames.Float).Set(value.V_Offset)
+        prim.CreateInput("offset", Sdf.ValueTypeNames.Float2).Set(Gf.Vec2f(value.U_Offset, value.V_Offset))
         
     def addShader(self, parentPrim, parentNode, Property):
         if not (str(Property)).endswith(("_map", "p_input")): #TODO: should probably just be checking if this is a textureMap class, this will catch undefined and properties, assuming superClassOf doesn't fail for undefined.
@@ -336,6 +340,7 @@ class rsxshaderwriter(maxUsd.ShaderWriter):
         relPath = rt.pathConfig.convertPathToAbsolute(path)
         relPath = usd_utils.safe_relpath(relPath, os.path.dirname(self.GetFilename()))
         return relPath.replace(os.sep, "/")
+        
         
     def addDisplacement(self, material, surfacePrim):
         if rt.classOf(material) not in [rt.rsStandardMaterial, rt.rsMaterialBlender, rt.rsSprite, rt.rsIncandescent]:
