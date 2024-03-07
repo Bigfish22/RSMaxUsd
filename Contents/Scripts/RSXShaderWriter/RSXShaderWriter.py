@@ -2,6 +2,7 @@ import maxUsd
 import usd_utils
 from pymxs import runtime as rt
 from pxr import UsdShade, Sdf, Gf
+import RSPreviewWriter
 import usd_utils
 import traceback
 import os
