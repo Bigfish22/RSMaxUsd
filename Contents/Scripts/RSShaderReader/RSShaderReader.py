@@ -1,6 +1,7 @@
 import maxUsd
 from pymxs import runtime as rt
 from pxr import UsdShade, Sdf
+import usd_utils
 import pymxs
 import traceback
 import glob
@@ -11,7 +12,8 @@ maxTypeToSdf = {Sdf.ValueTypeNames.Float : rt.Double,
                 Sdf.ValueTypeNames.Bool : rt.BooleanClass,
                 Sdf.ValueTypeNames.String : rt.string,
                 Sdf.ValueTypeNames.Float3 : rt.point3,
-                Sdf.ValueTypeNames.Asset: rt.string}
+                Sdf.ValueTypeNames.Asset  : rt.string,
+                Sdf.ValueTypeNames.Float2 : rt.point2}
 
 schemaToMax = {'redshift::': rt.MultiOutputChannelTexmapToTexmap,
                  'redshift::AmbientOcclusion': rt.rsAmbientOcclusion,
@@ -132,7 +134,9 @@ schemaToMax = {'redshift::': rt.MultiOutputChannelTexmapToTexmap,
                  'redshift::StoreColorToAOV': rt.rsStoreColorToAOV,
                  'redshift::RSColorCorrection': rt.rsColorCorrection}
 
-
+PropertyRemaps = {rt.rsOSLMap : {'OSLCode':'RS_osl_code', 'oslFilename':'RS_osl_file', 'oslSource':'RS_osl_source'},
+                  rt.rsTexture: {"scale_x" : "scale", "scale_y": "scale", "offset_x" : "offset", "offset_y" : "offset"}}
+                      
 class RSShaderReader(maxUsd.ShaderReader):
     def Read(self):
         try:
@@ -144,9 +148,13 @@ class RSShaderReader(maxUsd.ShaderReader):
             
             displacementConnection = prim.GetAttribute('inputs:Displacement').GetConnections()
             
-            shader = prim.GetPrimAtPath(surfaceConnection[0].GetPrimPath())
+            if prim.GetAttribute('inputs:Volume'):
+                volumeConnection = prim.GetAttribute('inputs:Volume').GetConnections()
+                shader = prim.GetPrimAtPath(volumeConnection[0].GetPrimPath())
+            else:    
+                shader = prim.GetPrimAtPath(surfaceConnection[0].GetPrimPath())
+                
             shaderID = shader.GetAttribute("info:id").Get()
-            
             
             if not (shaderID in schemaToMax):
                 print(shaderID, "is not supported by this reader!")
@@ -216,6 +224,16 @@ class RSShaderReader(maxUsd.ShaderReader):
                 maxNode.oslFilename = shader.GetAttribute("inputs:RS_osl_file").Get().path
             if shader.GetAttribute("inputs:RS_osl_source"):
                 maxNode.oslSource = shader.GetAttribute("inputs:RS_osl_source").Get()
+                
+        if rt.classOf(maxNode) == rt.rsTexture:
+            scaleAttr = shader.GetAttribute("inputs:scale")
+            if scaleAttr:
+                maxNode.scale_x = scaleAttr.Get()[0]
+                maxNode.scale_y = scaleAttr.Get()[1]
+            offsetAttr = shader.GetAttribute("inputs:offset")
+            if offsetAttr:
+                maxNode.offset_x = offsetAttr.Get()[0] 
+                maxNode.offset_y = offsetAttr.Get()[1]
         
         for i in shader.GetPropertyNames():
                 if i.startswith('inputs:'):
