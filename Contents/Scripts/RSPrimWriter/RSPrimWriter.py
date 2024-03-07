@@ -94,7 +94,7 @@ class RSLightWriter(maxUsd.PrimWriter):
                 prim.CreateAttribute('redshift:light:SetEnableLegacyNonAreaLightIntensity', Sdf.ValueTypeNames.Bool).Set(node.legacyNonAreaLightIntensity)
                 prim.CreateAttribute('redshift:light:SetEnableLegacySoftShadowTechnique', Sdf.ValueTypeNames.Bool).Set(node.legacySoftShadowTechnique)
                 
-                prim.CreateAttribute('redshift:light:unitsType', Sdf.ValueTypeNames.Bool).Set(node.unitsType)
+                prim.CreateAttribute('redshift:light:unitsType', Sdf.ValueTypeNames.Int).Set(node.unitsType)
                 prim.CreateAttribute('redshift:light:lumensperwatt', Sdf.ValueTypeNames.Float).Set(node.lumensperwatt)
                 
                 
