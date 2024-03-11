@@ -22,10 +22,11 @@ into:
 * materials, lights, Volumes and proxies exported will render within the redshift hydra delegate in solaris.
 
 ## Limitations
-* only supports rs nodes
+* MATERIAL NODES WITH IDENTICAL NAMES IN A SINGLE GRAPH CAN CAUSE HOUDINI TO HANG!
+* only supports rs nodes + (max composite and max vertex color)
 * some nodes will not appear in hydra due to extreme differences between the max and houdini versions. (rs state being an example)
 * rs bitmap is converted to rs texture
 * ramp UI inputs are not supported (effects rs brick)
-* no ramp or composite support
+* no gradient ramp
 * legacy rs nodes are not supported (rs material, rs normal etc)
 * displacement in blend materials is not yet supported.

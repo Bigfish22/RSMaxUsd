@@ -47,7 +47,7 @@ maxShaderToRS = {rt.MultiOutputChannelTexmapToTexmap : ["", 'out'],
                 rt.rsColorSplitter : ['RSColorSplitter', ''],
                 rt.rsMathSubColor : ['RSMathSubColor', 'outColor'],
                 rt.rsColor2HSV : ['RSColor2HSV', 'outColor'],
-                rt.rsUserDataColor : ['RSUserDataColor', 'outColor'],
+                rt.rsUserDataColor : ['RSUserDataColor', 'out'],
                 rt.rsMathCos : ['RSMathCos', 'out'],
                 rt.rsMathCrossVector : ['RSCrossProduct', 'out'],
                 rt.rsCurvature : ['RSCurvature', 'out'],
@@ -138,15 +138,22 @@ maxShaderToRS = {rt.MultiOutputChannelTexmapToTexmap : ["", 'out'],
                 rt.rsVolume : ['Volume', 'outColor'],
                 rt.rsIncandescent : ['Incandescent', 'outColor'],
                 rt.rsStoreColorToAOV : ['StoreColorToAOV', 'outColor'],
-                rt.rsColorCorrection : ['RSColorCorrection', 'outColor']}
+                rt.rsColorCorrection : ['RSColorCorrection', 'outColor'],
+                rt.CompositeMap :      ['RSColorLayer', 'outColor'],
+                rt.VertexColor  :      ['RSUserDataColor', 'out']}
                     
 PropertyRemaps = {rt.rsOSLMap : {'OSLCode':'RS_osl_code', 'oslFilename':'RS_osl_file', 'oslSource':'RS_osl_source'},
                   rt.rsTexture: {"scale_x" : "scale", "scale_y": "scale", "offset_x" : "offset", "offset_y" : "offset"}}
 
 
+
 class rsxshaderwriter(maxUsd.ShaderWriter):
     def Write(self):
         try:
+            self.nodeTranslators = {rt.CompositeMap: self.NodeTranslateComposite,
+                                    rt.Gradient_Ramp : self.NodeTranslateGradientRamp,
+                                    rt.VertexColor : self.NodeTranslateVertexColor}
+            
             material = rt.GetAnimByHandle(self.GetMaterial())
             isMultiTarget = len(self.GetExportArgs().GetAllMaterialConversions()) > 1
             
@@ -203,11 +210,10 @@ class rsxshaderwriter(maxUsd.ShaderWriter):
         if rt.getPropertyController(Node, str(Property)):
             animated = True
         if not (nodeClass == rt.rsOSLMap):
-            if value == getattr(template, str(Property)) and not animated: #TODO: This should also check if a value is animated, if its animated we should probably write its values.
+            if value == getattr(template, str(Property)) and not animated:
                 return #The property is still at its defualt value and it is not animated, so we can just skip doing anything with it
             
         type = rt.classOf(value)
-        
         if not (type in maxTypeToSdf):
             rt.UsdExporter.Log(rt.Name("warn"), (str(Property) + "has unsupported type conversion" + str(type)))
             return
@@ -285,20 +291,35 @@ class rsxshaderwriter(maxUsd.ShaderWriter):
         prim.CreateInput("Rotate", Sdf.ValueTypeNames.Float).Set(value.W_Angle)
         prim.CreateInput("offset", Sdf.ValueTypeNames.Float2).Set(Gf.Vec2f(value.U_Offset, value.V_Offset))
         
-    def addShader(self, parentPrim, parentNode, Property):
-        if not (str(Property)).endswith(("_map", "p_input")): #TODO: should probably just be checking if this is a textureMap class, this will catch undefined and properties, assuming superClassOf doesn't fail for undefined.
+    def addShader(self, parentPrim, parentNode, Property, propertyOverride = None, nodeOverride = None):
+        if not (str(Property)).endswith(("_map", "p_input")) and nodeOverride == None: #TODO: should probably just be checking if this is a textureMap class, this will catch undefined and properties, assuming superClassOf doesn't fail for undefined.
             return
-            
-        maxShader = getattr(parentNode, str(Property))
+        
+        #some node translators might need to provide a specific max node, instead of just the property
+        if nodeOverride is not None:
+            maxShader = nodeOverride
+        else:
+            maxShader = getattr(parentNode, str(Property))
+        
+        #if we have nothing return early
         if maxShader == rt.undefined:
             return
         
-        
+        #do we even support this? if not return early, log to the user.
         maxClass = rt.classOf(maxShader)
         if not (maxClass in maxShaderToRS):
             rt.UsdExporter.Log(rt.Name("warn"), (str(maxClass) + "is not supported, this node and any children will be skipped!"))
             return
             
+        #this section handles if we need a full custom function to handle this node, because it needs bulk translation work.
+        if maxClass in self.nodeTranslators:
+            if propertyOverride != None:  
+                self.nodeTranslators[maxClass](parentPrim, parentNode, maxShader, propertyOverride)
+            else:
+                self.nodeTranslators[maxClass](parentPrim, parentNode, maxShader, str(Property))
+            return
+        
+        #multiOutput swizzling chaos
         outPutName = maxShaderToRS[maxClass][1]
         if maxClass == rt.MultiOutputChannelTexmapToTexmap:
             outPutName = maxShader.sourcemap.getIMultipleOutputChannelName(maxShader.outputChannelIndex)
@@ -318,6 +339,9 @@ class rsxshaderwriter(maxUsd.ShaderWriter):
         
         if tidyProperty == "bump_input":
             parentSdfType = Sdf.ValueTypeNames.Int
+        elif propertyOverride is not None:
+            tidyProperty = propertyOverride
+            parentSdfType = Sdf.ValueTypeNames.Token
         elif not (hasattr(parentNode, tidyProperty)):
             parentSdfType = Sdf.ValueTypeNames.Int
         elif rt.superClassOf(getattr(parentNode, tidyProperty)) == rt.textureMap:
@@ -376,7 +400,70 @@ class rsxshaderwriter(maxUsd.ShaderWriter):
                         break
             return #TODO: deal with the possibility of blended displacements from different materials
         """
+    def NodeTranslateComposite(self, parentPrim, parentNode, node, propertName):
+        blendModeMap = {0:0,  #Normal
+                        1:1,  #Average
+                        2:2,  #Add 
+                        3:3,  #Subtract
+                        5:4,  #Multiply
+                        19:5, #Difference
+                        8:6,  #Lighten
+                        4:7,  #Darken
+                        9:8,  #Screen
+                        16:9, #Hardlight
+                        15:10,#Softlight
+                        6:11, #Burn
+                        10:12,#Dodge
+                        14:13}#Overlay
+                            
+        primName = node.name.replace(" ", "_").replace("#", "_")
+        usdShader = UsdShade.Shader.Define(self.GetUsdStage(), ((self.GetUsdPath()).GetParentPath()).AppendPath(primName))
         
+        rt.execute("fn animControllerHelper value = (return value.controller)") #helper maxscript function to get animation controller
+        
+        arrayCount = min(len(node.mapList), 8)
+        for i in range(0, arrayCount):
+            animated = False
+            
+            propNameBase = 'base'
+            if i != 0:
+                propNameBase = 'layer' + str(i)
+                
+            self.addShader(usdShader, node, node.mapList[i], propNameBase + '_color', node.mapList[i])
+            
+            opacityAttr = usdShader.CreateInput(propNameBase + '_mask', Sdf.ValueTypeNames.Float)
+            if rt.animControllerHelper(node.opacity[i]) is not None:
+                animated = True
+            if animated and self.animationMode != maxUsd.TimeMode.CurrentFrame:
+                currentStep = self.startTime
+                while currentStep < self.endTime:
+                    with pymxs.attime(currentStep):
+                        value = node.opacity[i] / 100.0
+                    opacityAttr.Set(value, currentStep)
+                    currentStep += 1 / self.timeStep
+            else:
+                opacityAttr.Set(node.opacity[i] / 100.0)
+                
+            usdShader.CreateInput(propNameBase + '_enable', Sdf.ValueTypeNames.Int).Set(int(node.mapEnabled[i]))
+            
+            if node.blendMode[i] in blendModeMap.keys():
+                usdShader.CreateInput(propNameBase + '_blend_mode', Sdf.ValueTypeNames.Int).Set(blendModeMap[node.blendMode[i]])
+            else:
+                rt.UsdExporter.Log(rt.Name("warn"), f"unsupported blend mode in use on {primName}, this will use defualt")
+                
+        usdShader.CreateIdAttr("redshift::RSColorLayer")
+        parentPrim.CreateInput(propertName.replace("_map", ""), Sdf.ValueTypeNames.Token).ConnectToSource(usdShader.ConnectableAPI(), "outColor")
+        
+    def NodeTranslateGradientRamp(self, parentPrim, parentNode, node, propertName):
+        pass
+        
+    def NodeTranslateVertexColor(self, parentPrim, parentNode, node, propertName):
+        primName = node.name.replace(" ", "_").replace("#", "_")
+        usdShader = UsdShade.Shader.Define(self.GetUsdStage(), ((self.GetUsdPath()).GetParentPath()).AppendPath(primName))
+        usdShader.CreateIdAttr("redshift::RSUserDataColor")
+        usdShader.CreateInput("attribute", Sdf.ValueTypeNames.String).Set("vertexColor")
+        
+        parentPrim.CreateInput(propertName.replace("_map", ""), Sdf.ValueTypeNames.Token).ConnectToSource(usdShader.ConnectableAPI(), "out")
         
     @classmethod
     def CanExport(cls, exportArgs):
