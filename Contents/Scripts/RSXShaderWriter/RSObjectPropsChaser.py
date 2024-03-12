@@ -162,7 +162,6 @@ class RSObjectPropertiesChaser(maxUsd.ExportChaser):
     def PostExport(self):
         try:
             for prim_path, node_handle in self.primsToNodeHandles.items():
-                print(node_handle)
                 node = rt.maxOps.getNodeByHandle(node_handle)
                 prim = self.stage.GetPrimAtPath(prim_path)
                 

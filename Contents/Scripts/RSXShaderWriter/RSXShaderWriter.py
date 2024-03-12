@@ -1,5 +1,6 @@
 import maxUsd
 import usd_utils
+import pymxs
 from pymxs import runtime as rt
 from pxr import UsdShade, Sdf, Gf
 import RSPreviewWriter
@@ -134,7 +135,7 @@ maxShaderToRS = {rt.MultiOutputChannelTexmapToTexmap : ["", 'out'],
                 rt.rsMaterialSwitch : ["RSShaderSwitch", 'outClosure'],
                 rt.rsPrincipledHair : ['Hair2', 'out'],
                 rt.rsSprite : ['Sprite', 'outColor'],
-                rt.rsMaterialBlender : ['MaterialBlender', 'outColor'],
+                rt.rsMaterialBlender : ['MaterialBlender', 'out'],
                 rt.rsVolume : ['Volume', 'outColor'],
                 rt.rsIncandescent : ['Incandescent', 'outColor'],
                 rt.rsStoreColorToAOV : ['StoreColorToAOV', 'outColor'],
@@ -147,7 +148,7 @@ PropertyRemaps = {rt.rsOSLMap : {'OSLCode':'RS_osl_code', 'oslFilename':'RS_osl_
 
 
 
-class rsxshaderwriter(maxUsd.ShaderWriter):
+class RSShaderWriter(maxUsd.ShaderWriter):
     def Write(self):
         try:
             self.nodeTranslators = {rt.CompositeMap: self.NodeTranslateComposite,
@@ -189,9 +190,9 @@ class rsxshaderwriter(maxUsd.ShaderWriter):
             templateDef = rt.classOf(material)
             templateClass = templateDef()
             for property in rt.getPropNames(material):
-                self.addProperty(nodeShader, material, property, templateClass)
-                self.addShader(nodeShader, material, property)
-            self.addDisplacement(material, surfaceShader)
+                self.AddProperty(nodeShader, material, property, templateClass)
+                self.AddShader(nodeShader, material, property)
+            self.AddDisplacement(material, surfaceShader)
             return True
 
         except Exception as e:
@@ -199,107 +200,106 @@ class rsxshaderwriter(maxUsd.ShaderWriter):
             print('Write() - Error: %s' % str(e))
             print(traceback.format_exc())
             
-    def addProperty(self, Prim, Node, Property, template):
-        if(str(Property).endswith(("_map","_mapamount", "_mapenable", "_enable", "_input"))):
+    def AddProperty(self, prim, node, prop, template):
+        if(str(prop).endswith(("_map","_mapamount", "_mapenable", "_enable", "_input"))):
             return
         
-        nodeClass = rt.ClassOf(Node)
+        nodeClass = rt.ClassOf(node)
         
-        value = getattr(Node, str(Property))
+        value = getattr(node, str(prop))
         animated = False
-        if rt.getPropertyController(Node, str(Property)):
+        if rt.getPropertyController(node, str(prop)):
             animated = True
         if not (nodeClass == rt.rsOSLMap):
-            if value == getattr(template, str(Property)) and not animated:
+            if value == getattr(template, str(prop)) and not animated:
                 return #The property is still at its defualt value and it is not animated, so we can just skip doing anything with it
             
         type = rt.classOf(value)
         if not (type in maxTypeToSdf):
-            rt.UsdExporter.Log(rt.Name("warn"), (str(Property) + "has unsupported type conversion" + str(type)))
+            rt.UsdExporter.Log(rt.Name("warn"), (str(prop) + "has unsupported type conversion" + str(type)))
             return
             
         
-        value = self.resolveValue(Prim, type, value, Property, Node)
+        value = self.ResolveValue(prim, type, value, prop, node)
         if value is None:
             return
             
         sdfType = maxTypeToSdf[self.type]
         
-        propertyName = str(Property)
+        propertyName = str(prop)
         if nodeClass in PropertyRemaps:
-            if str(Property) in PropertyRemaps[nodeClass]:
-                propertyName = PropertyRemaps[nodeClass][str(Property)]
+            if str(prop) in PropertyRemaps[nodeClass]:
+                propertyName = PropertyRemaps[nodeClass][str(prop)]
                 
-        inputAttribute = Prim.CreateInput(propertyName, sdfType)
+        inputAttribute = prim.CreateInput(propertyName, sdfType)
         if not animated or self.animationMode == maxUsd.TimeMode.CurrentFrame:
             inputAttribute.Set(value)
         else:
             currentStep = self.startTime
             while currentStep < self.endTime:
                 with pymxs.attime(currentStep):
-                    value = getattr(Node, str(Property))
-                value = self.resolveValue(Prim, type, value, Property, Node)
+                    value = getattr(node, str(prop))
+                value = self.ResolveValue(prim, type, value, prop, node)
                 inputAttribute.Set(value, currentStep)
                 currentStep += 1 / self.timeStep
     
-    def resolveValue(self, prim, type, value, Property, Node):
+    def ResolveValue(self, prim, type, value, prop, node):
         self.type = type
         if type == rt.Color:
             value = (value.r/255, value.g/255, value.b/255)
         elif type == rt.point3:
             value = Gf.Vec3f(value.x, value.y, value.z)
         elif type == rt.string:
-            self.resolveString(prim, value, Property, Node)
+            self.ResolveString(prim, value, prop, node)
             value = None
         elif type == rt.StandardUVGen:
-            self.resolveUVGen(prim, value)
+            self.ResolveUVGen(prim, value)
             value = None
         elif type == rt.BitMap:
             value = None
-        elif rt.classof(Node) == rt.rsTexture and str(Property).endswith(('_x', '_y')):
-            value = Gf.Vec2f(getattr(Node, str(Property)[:-2] + '_x'), getattr(Node, str(Property)[:-2] + '_y'))
+        elif rt.classof(node) == rt.rsTexture and str(prop).endswith(('_x', '_y')):
+            value = Gf.Vec2f(getattr(node, str(prop)[:-2] + '_x'), getattr(node, str(prop)[:-2] + '_y'))
             self.type = rt.point2
         return value
             
-    def resolveString(self, prim, value, Property, Node):
+    def ResolveString(self, prim, value, prop, node):
         #is it a filepath? if so we need to store it as an asset. Relative file paths don't seem to resolve, need to work out how works.
-        directory = os.path.dirname(self.GetFilename())
-        nodeClass = rt.classOf(Node)
+        nodeClass = rt.classOf(node)
         if re.search("\....$", value):
-            assetPath = self.relativeAssetPath(value)
-            propertyName = str(Property)
+            assetPath = self.RelativeAssetPath(value)
+            propertyName = str(prop)
             if propertyName == "tex0_filename":
                 propertyName = "tex0"
                 try:  #sprites dont have tiling mode, classic stitch up there
-                    if getattr(Node, "tilingmode") == 1:
+                    if getattr(node, "tilingmode") == 1:
                         assetPath = re.sub("1[0-9]{3}", "<UDIM>", assetPath)
                 except:
                     pass
-            if rt.ClassOf(Node) in PropertyRemaps:
-                if str(Property) in PropertyRemaps[nodeClass]:
-                    propertyName = PropertyRemaps[nodeClass][str(Property)]
+            if rt.ClassOf(node) in PropertyRemaps:
+                if str(prop) in PropertyRemaps[nodeClass]:
+                    propertyName = PropertyRemaps[nodeClass][str(prop)]
                     prim.CreateInput(propertyName, Sdf.ValueTypeNames.Asset).Set(assetPath)
 
                     return
             prim.CreateInput(propertyName, Sdf.ValueTypeNames.Asset).Set(assetPath)
         else:
-            prim.CreateInput(str(Property), Sdf.ValueTypeNames.String).Set(value)
+            prim.CreateInput(str(prop), Sdf.ValueTypeNames.String).Set(value)
 
     
-    def resolveUVGen(self, prim, value):
+    def ResolveUVGen(self, prim, value):
         prim.CreateInput("scale", Sdf.ValueTypeNames.Float2).Set(Gf.Vec2f(value.U_Tiling, value.V_Tiling))
         prim.CreateInput("Rotate", Sdf.ValueTypeNames.Float).Set(value.W_Angle)
         prim.CreateInput("offset", Sdf.ValueTypeNames.Float2).Set(Gf.Vec2f(value.U_Offset, value.V_Offset))
         
-    def addShader(self, parentPrim, parentNode, Property, propertyOverride = None, nodeOverride = None):
-        if not (str(Property)).endswith(("_map", "p_input")) and nodeOverride == None: #TODO: should probably just be checking if this is a textureMap class, this will catch undefined and properties, assuming superClassOf doesn't fail for undefined.
+    def AddShader(self, parentPrim, parentNode, prop, propertyOverride = None, nodeOverride = None):
+        if not (str(prop)).endswith(("_map", "p_input")) and nodeOverride == None: #TODO: should probably just be checking if this is a textureMap class, this will catch undefined and properties, assuming superClassOf doesn't fail for undefined.
             return
         
         #some node translators might need to provide a specific max node, instead of just the property
         if nodeOverride is not None:
             maxShader = nodeOverride
         else:
-            maxShader = getattr(parentNode, str(Property))
+            maxShader = getattr(parentNode, str(prop))
         
         #if we have nothing return early
         if maxShader == rt.undefined:
@@ -316,7 +316,7 @@ class rsxshaderwriter(maxUsd.ShaderWriter):
             if propertyOverride != None:  
                 self.nodeTranslators[maxClass](parentPrim, parentNode, maxShader, propertyOverride)
             else:
-                self.nodeTranslators[maxClass](parentPrim, parentNode, maxShader, str(Property))
+                self.nodeTranslators[maxClass](parentPrim, parentNode, maxShader, str(prop))
             return
         
         #multiOutput swizzling chaos
@@ -334,8 +334,7 @@ class rsxshaderwriter(maxUsd.ShaderWriter):
         usdShader.CreateIdAttr("redshift::" + maxShaderToRS[maxClass][0])
         
         #Theres is a pretty good chance this could break on some shader property name somewhere
-        tidyProperty = str(Property).replace("_map", "")
-        tidyProperty = tidyProperty[0].lower() + tidyProperty[1:] #were not even going to talk about this
+        tidyProperty = self.CleanMapProperty(str(prop))
         
         if tidyProperty == "bump_input":
             parentSdfType = Sdf.ValueTypeNames.Int
@@ -358,16 +357,20 @@ class rsxshaderwriter(maxUsd.ShaderWriter):
         templateDef = maxClass
         templateClass = templateDef()
         for shaderProperty in rt.getPropNames(maxShader):
-                self.addProperty(usdShader, maxShader, shaderProperty, templateClass)
-                self.addShader(usdShader, maxShader, shaderProperty)
+                self.AddProperty(usdShader, maxShader, shaderProperty, templateClass)
+                self.AddShader(usdShader, maxShader, shaderProperty)
         
-    def relativeAssetPath(self, path):
+    def RelativeAssetPath(self, path):
         relPath = rt.pathConfig.convertPathToAbsolute(path)
         relPath = usd_utils.safe_relpath(relPath, os.path.dirname(self.GetFilename()))
         return relPath.replace(os.sep, "/")
+    
+    def CleanMapProperty(self, prop):
+        tidyProperty = prop.replace("_map", "")
+        tidyProperty = tidyProperty[0].lower() + tidyProperty[1:] #were not even going to talk about this
+        return tidyProperty
         
-        
-    def addDisplacement(self, material, surfacePrim):
+    def AddDisplacement(self, material, surfacePrim):
         if rt.classOf(material) not in [rt.rsStandardMaterial, rt.rsMaterialBlender, rt.rsSprite, rt.rsIncandescent]:
             return #if the material isn't one of these, then there cant be a displacement in the graph so we can just do nothing.
             
@@ -385,8 +388,8 @@ class rsxshaderwriter(maxUsd.ShaderWriter):
             templateDef = maxClass
             templateClass = templateDef()
             for property in rt.getPropNames(material.displacement_input):
-                self.addProperty(usdShader, material.displacement_input, property, templateClass)
-                self.addShader(usdShader, material.displacement_input, property)
+                self.AddProperty(usdShader, material.displacement_input, property, templateClass)
+                self.AddShader(usdShader, material.displacement_input, property)
             return
         
         """
@@ -429,7 +432,7 @@ class rsxshaderwriter(maxUsd.ShaderWriter):
             if i != 0:
                 propNameBase = 'layer' + str(i)
                 
-            self.addShader(usdShader, node, node.mapList[i], propNameBase + '_color', node.mapList[i])
+            self.AddShader(usdShader, node, node.mapList[i], propNameBase + '_color', node.mapList[i])
             
             opacityAttr = usdShader.CreateInput(propNameBase + '_mask', Sdf.ValueTypeNames.Float)
             if rt.animControllerHelper(node.opacity[i]) is not None:
@@ -452,7 +455,7 @@ class rsxshaderwriter(maxUsd.ShaderWriter):
                 rt.UsdExporter.Log(rt.Name("warn"), f"unsupported blend mode in use on {primName}, this will use defualt")
                 
         usdShader.CreateIdAttr("redshift::RSColorLayer")
-        parentPrim.CreateInput(propertName.replace("_map", ""), Sdf.ValueTypeNames.Token).ConnectToSource(usdShader.ConnectableAPI(), "outColor")
+        parentPrim.CreateInput(self.CleanMapProperty(propertName), Sdf.ValueTypeNames.Token).ConnectToSource(usdShader.ConnectableAPI(), "outColor")
         
     def NodeTranslateGradientRamp(self, parentPrim, parentNode, node, propertName):
         pass
@@ -463,7 +466,7 @@ class rsxshaderwriter(maxUsd.ShaderWriter):
         usdShader.CreateIdAttr("redshift::RSUserDataColor")
         usdShader.CreateInput("attribute", Sdf.ValueTypeNames.String).Set("vertexColor")
         
-        parentPrim.CreateInput(propertName.replace("_map", ""), Sdf.ValueTypeNames.Token).ConnectToSource(usdShader.ConnectableAPI(), "out")
+        parentPrim.CreateInput(self.CleanMapProperty(propertName), Sdf.ValueTypeNames.Token).ConnectToSource(usdShader.ConnectableAPI(), "out")
         
     @classmethod
     def CanExport(cls, exportArgs):
@@ -472,10 +475,10 @@ class rsxshaderwriter(maxUsd.ShaderWriter):
         return maxUsd.ShaderWriter.ContextSupport.Unsupported
 
 # Register the writer.
-maxUsd.ShaderWriter.Register(rsxshaderwriter, "RS Standard Material")
-maxUsd.ShaderWriter.Register(rsxshaderwriter, "RS Principled Hair")
-maxUsd.ShaderWriter.Register(rsxshaderwriter, "RS Sprite")
-maxUsd.ShaderWriter.Register(rsxshaderwriter, "RS Material Blender")
-maxUsd.ShaderWriter.Register(rsxshaderwriter, "RS Volume")
-maxUsd.ShaderWriter.Register(rsxshaderwriter, "RS Incandescent")
-maxUsd.ShaderWriter.Register(rsxshaderwriter, "RS Store Color To AOV")
+maxUsd.ShaderWriter.Register(RSShaderWriter, "RS Standard Material")
+maxUsd.ShaderWriter.Register(RSShaderWriter, "RS Principled Hair")
+maxUsd.ShaderWriter.Register(RSShaderWriter, "RS Sprite")
+maxUsd.ShaderWriter.Register(RSShaderWriter, "RS Material Blender")
+maxUsd.ShaderWriter.Register(RSShaderWriter, "RS Volume")
+maxUsd.ShaderWriter.Register(RSShaderWriter, "RS Incandescent")
+maxUsd.ShaderWriter.Register(RSShaderWriter, "RS Store Color To AOV")
