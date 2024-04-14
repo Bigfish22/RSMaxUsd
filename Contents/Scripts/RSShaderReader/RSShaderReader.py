@@ -174,11 +174,15 @@ class RSShaderReader(maxUsd.ShaderReader):
                             MapPropertyName, Map = self.AddNode(prim, propertyName, Connections)
                             if MapPropertyName:
                                 rt.USDImporter.SetMaterialParamByName(maxNode, MapPropertyName, Map)
+                                continue
                         value = self.ResolveMaxValue(usdAttribute)
                         if value:
                             if propertyName == "tex0":  #SCREAMING
                                 propertyName = "tex0_filename"
-                            rt.USDImporter.SetMaterialParamByName(maxNode, propertyName, value)
+                            try:
+                                rt.USDImporter.SetMaterialParamByName(maxNode, propertyName, value)
+                            except:
+                                print("invalid propert:", propertyName, "with", value)
                             
             #plob displacement back in if its a standard material
             if rt.classOf(maxNode) == rt.rsStandardMaterial:
@@ -249,15 +253,17 @@ class RSShaderReader(maxUsd.ShaderReader):
                                     rt.USDImporter.SetTexmapParamByName(maxNode, ChildMapPropertyName, Map)
                                 except:
                                     rt.USDImporter.SetMaterialParamByName(maxNode, ChildMapPropertyName, Map)
+                                continue
                                     
                         value = self.ResolveMaxValue(usdAttribute)
-                        if value:
+                        if value != None:
                             if ChildpropertyName == "tex0":  #SCREAMING
                                 ChildpropertyName = "tex0_filename"
-                            try:
-                                rt.USDImporter.SetTexmapParamByName(maxNode, ChildpropertyName, value)
-                            except:
-                                rt.USDImporter.SetMaterialParamByName(maxNode, ChildpropertyName, value)
+                            if getattr(maxNode, ChildpropertyName) != None:
+                                try:
+                                    rt.USDImporter.SetTexmapParamByName(maxNode, ChildpropertyName, value)
+                                except:
+                                    rt.USDImporter.SetMaterialParamByName(maxNode, ChildpropertyName, value)
                                 
                                 
         self.MapLibrary[shader] = rt.getHandleByAnim(maxNode)
@@ -282,7 +288,7 @@ class RSShaderReader(maxUsd.ShaderReader):
         if sdfValue == None:
             return None
         maxValue = sdfValue
-        if sdfType == Sdf.ValueTypeNames.Color3f:
+        if sdfType == Sdf.ValueTypeNames.Color3f or sdfType == Sdf.ValueTypeNames.Float3:
             maxValue = rt.point4(sdfValue[0], sdfValue[1], sdfValue[2], 1)
         if sdfType == Sdf.ValueTypeNames.Asset:
             maxValue = sdfValue.path
