@@ -111,7 +111,7 @@ maxShaderToRS = {rt.MultiOutputChannelTexmapToTexmap : ["", 'out'],
                 rt.rsMathFloorVector : ['RSMathFloorVector', 'out'],
                 rt.rsMathFracVector : ['RSMathFracVector', 'out'],
                 rt.rsMathGainVector : ['RSMathGainVector', 'out'],
-                rt.rsMathInvVector : ['RSMathInvertVector', 'out'],
+                rt.rsMathInvVector : ['RSMathInvVector', 'out'],
                 rt.rsMathLengthVector : ['RSMathLengthVector', 'out'],
                 rt.rsMathLnVector : ['RSMathLnVector', 'out'],
                 rt.rsMathLogVector : ['RSMathLogVector', 'out'],
@@ -288,7 +288,7 @@ class RSShaderWriter(maxUsd.ShaderWriter):
     
     def ResolveUVGen(self, prim, value):
         prim.CreateInput("scale", Sdf.ValueTypeNames.Float2).Set(Gf.Vec2f(value.U_Tiling, value.V_Tiling))
-        prim.CreateInput("Rotate", Sdf.ValueTypeNames.Float).Set(value.W_Angle)
+        prim.CreateInput("rotate", Sdf.ValueTypeNames.Float).Set(value.W_Angle)
         prim.CreateInput("offset", Sdf.ValueTypeNames.Float2).Set(Gf.Vec2f(value.U_Offset, value.V_Offset))
         
     def AddShader(self, parentPrim, parentNode, prop, propertyOverride = None, nodeOverride = None):
