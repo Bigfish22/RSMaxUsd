@@ -141,7 +141,13 @@ maxShaderToRS = {rt.MultiOutputChannelTexmapToTexmap : ["", 'out'],
                 rt.rsStoreColorToAOV : ['StoreColorToAOV', 'outColor'],
                 rt.rsColorCorrection : ['RSColorCorrection', 'outColor'],
                 rt.CompositeMap :      ['RSColorLayer', 'outColor'],
-                rt.VertexColor  :      ['RSUserDataColor', 'out']}
+                rt.VertexColor  :      ['RSUserDataColor', 'out'],
+                rt.rsStandardVolume :  ['StandardVolume', 'outColor'],
+                rt.rsVolumeColorAttribute : ['VolumeColorAttribute', 'outColor'],
+                rt.rsVolumeScalarAttribute : ['VolumeScalarAttribute', 'out'],
+                rt.rsToonMaterial : ['ToonMaterial', 'outColor'],
+                rt.rsContour : ['Contour', 'outColor'],
+                rt.rsTonemapPattern : ['TonemapPattern', 'outColor']}
                     
 PropertyRemaps = {rt.rsOSLMap : {'OSLCode':'RS_osl_code', 'oslFilename':'RS_osl_file', 'oslSource':'RS_osl_source'},
                   rt.rsTexture: {"scale_x" : "scale", "scale_y": "scale", "offset_x" : "offset", "offset_y" : "offset"}}
@@ -181,7 +187,7 @@ class RSShaderWriter(maxUsd.ShaderWriter):
             nodeShader = UsdShade.Shader.Define(self.GetUsdStage(), (self.GetUsdPath()))
             nodeShader.CreateIdAttr("redshift::" + maxShaderToRS[rt.classOf(material)][0])
             
-            if rt.classOf(material) == rt.rsVolume:
+            if rt.classOf(material) == rt.rsVolume or rt.classOf(material) == rt.rsStandardVolume:
                 surfaceShader.CreateInput('Volume', Sdf.ValueTypeNames.Token).ConnectToSource(nodeShader.ConnectableAPI(), "outColor")
             else:
                 surfaceShader.CreateInput('Surface', Sdf.ValueTypeNames.Token).ConnectToSource(nodeShader.ConnectableAPI(), "outColor")
@@ -482,3 +488,5 @@ maxUsd.ShaderWriter.Register(RSShaderWriter, "RS Material Blender")
 maxUsd.ShaderWriter.Register(RSShaderWriter, "RS Volume")
 maxUsd.ShaderWriter.Register(RSShaderWriter, "RS Incandescent")
 maxUsd.ShaderWriter.Register(RSShaderWriter, "RS Store Color To AOV")
+maxUsd.ShaderWriter.Register(RSShaderWriter, "RS Standard Volume")
+maxUsd.ShaderWriter.Register(RSShaderWriter, "RS Toon Material")
