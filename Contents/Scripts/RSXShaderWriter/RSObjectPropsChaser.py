@@ -73,7 +73,6 @@ rsCameraProps = {"optical":{
                     #'redshift:camera:RS_campro_dofApect'
                     'bokehBlades':'redshift:camera:RS_campro_dofBladesCount',
                     'bokehAngle':'redshift:camera:RS_campro_dofBladesAngle',
-                    'bokeh':'redshift:camera:RS_campro_dofBokeh',
                     #'redshift:camera:RS_campro_dofBokehNorm'
                     'bokehImage_filename':'redshift:camera:RS_campro_dofBokehImage',
                     #'focusObject':'redshift:camera:RS_campro_dofObject',
@@ -178,7 +177,10 @@ class RSObjectPropertiesChaser(maxUsd.ExportChaser):
                             for prop in rsCameraProps[section]:
                                 value = getattr(subSection, prop)
                                 type = rt.classOf(value)
-                                prim.CreateAttribute(rsCameraProps[section][prop], maxTypeToSdf[type]).Set(self.resolveValue(value, type))
+                                try:
+                                    prim.CreateAttribute(rsCameraProps[section][prop], maxTypeToSdf[type]).Set(self.resolveValue(value, type))
+                                except:
+                                    print("something weird on camera is broken")
 
                         diaphragm = ['circular','bladed','image']
                         prim.CreateAttribute('redshift:camera:RS_campro_dofDiaphragm', Sdf.ValueTypeNames.String).Set(diaphragm[mod.optical.bokehShape])
