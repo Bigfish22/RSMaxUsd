@@ -132,7 +132,13 @@ schemaToMax = {'redshift::': rt.MultiOutputChannelTexmapToTexmap,
                  'redshift::Volume': rt.rsVolume,
                  'redshift::Incandescent': rt.rsIncandescent,
                  'redshift::StoreColorToAOV': rt.rsStoreColorToAOV,
-                 'redshift::RSColorCorrection': rt.rsColorCorrection}
+                 'redshift::RSColorCorrection': rt.rsColorCorrection,
+                 'redshift::StandardVolume' : rt.rsStandardVolume,
+                 'redshift::VolumeColorAttribute' : rt.rsVolumeColorAttribute,
+                 'redshift::VolumeScalarAttribute' : rt.rsVolumeScalarAttribute,
+                 'redshift::ToonMaterial' : rt.rsToonMaterial,
+                 'redshift::Contour' : rt.rsContour,
+                 'redshift::TonemapPattern' : rt.rsTonemapPattern}
 
 PropertyRemaps = {rt.rsOSLMap : {'OSLCode':'RS_osl_code', 'oslFilename':'RS_osl_file', 'oslSource':'RS_osl_source'},
                   rt.rsTexture: {"scale_x" : "scale", "scale_y": "scale", "offset_x" : "offset", "offset_y" : "offset"}}
