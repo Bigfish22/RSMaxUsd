@@ -98,6 +98,9 @@ class RSLightWriter(maxUsd.PrimWriter):
                 prim.CreateAttribute('redshift:light:lumensperwatt', Sdf.ValueTypeNames.Float).Set(node.lumensperwatt)
                 
                 
+                #lightLinking
+                WriteLightLinking(node, prim, self.GetNodesToPrims())
+                
             return True
 
         except Exception as e:
@@ -146,6 +149,8 @@ class RSSunWriter(maxUsd.PrimWriter):
             if rt.classOf(rt.environmentMap) == rt.rsPhysicalSky:
                 if rt.environmentMap.sun_node == node:
                     prim.CreateAttribute("redshift:light:sunSkyLight", Sdf.ValueTypeNames.Bool).Set(rt.useEnvironmentMap) #just incase somebody wants there settings but its disabled at the time.
+            
+            WriteLightLinking(node, prim, self.GetNodesToPrims())
             
             return True
             
@@ -248,6 +253,38 @@ def WritePropertyColor(usdAttribute, maxNode, maxProperty, usdTime):
     else:
         value = getattr(maxNode, maxProperty)
         usdAttribute.Set((value.r/255, value.g/255, value.b/255))
+
+def WriteLightLinking(node, prim, nodesToPrims):
+    lightPrim = UsdLux.LightAPI(prim)
+    lightCollection = lightPrim.GetLightLinkCollectionAPI()
+    shadowCollection = lightPrim.GetShadowLinkCollectionAPI()
+    
+    #Illumination
+    if node.inclExclType == 1 or node.inclExclType == 3:
+        if node.includeList != None:
+            includeRel = lightCollection.CreateIncludesRel()
+            lightCollection.CreateIncludeRootAttr().Set(False)
+            for object in node.includeList:
+                sdfPath = nodesToPrims[object.handle]
+                includeRel.AddTarget(sdfPath)
+        elif node.excludeList != None:
+            excludeRel = lightCollection.CreateExcludesRel()
+            for object in node.excludeList:
+                sdfPath = nodesToPrims[object.handle]
+                excludeRel.AddTarget(sdfPath)
+    #Shadows
+    if node.inclExclType == 2 or node.inclExclType == 3:
+        if node.includeList != None:
+            includeRel = shadowCollection.CreateIncludesRel()
+            shadowCollection.CreateIncludeRootAttr().Set(False)
+            for object in node.includeList:
+                sdfPath = nodesToPrims[object.handle]
+                includeRel.AddTarget(sdfPath)
+        elif node.excludeList != None:
+            excludeRel = shadowCollection.CreateExcludesRel()
+            for object in node.excludeList:
+                sdfPath = nodesToPrims[object.handle]
+                excludeRel.AddTarget(sdfPath)
 
 
 maxUsd.PrimWriter.Register(RSLightWriter, "RSLightWriter")
