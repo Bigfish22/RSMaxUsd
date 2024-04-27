@@ -215,11 +215,23 @@ class RSVolumeWriter(maxUsd.PrimWriter):
             opts = self.GetExportArgs()
             node = rt.maxOps.getNodeByHandle(nodeHandle)
             
+            filePath = node.file
+            startframe = node.startframe
+            endframe = node.endframe
+            pattern = node.pattern
+            frameoffset = node.frameoffset
+            
             volumePrim = UsdVol.Volume(prim)
             for grid in node.grids:
                 vdbAsset = UsdVol.OpenVDBAsset.Define(stage, (prim.GetPath().AppendPath(grid)))
                 vdbFilePath = usd_utils.safe_relpath(node.file, os.path.dirname(self.GetFilename()))
-                vdbAsset.CreateFilePathAttr(vdbFilePath)
+                filePathAttr = vdbAsset.CreateFilePathAttr(vdbFilePath)
+                if node.issequence:
+                    for i in range(startframe, endframe + 1):
+                        frameIndex = i + frameoffset
+                        fileName = pattern % frameIndex
+                        fullFramePath = usd_utils.safe_relpath(os.path.join(os.path.dirname(filePath), fileName), os.path.dirname(self.GetFilename()))
+                        filePathAttr.Set(fullFramePath, i)
                 vdbAsset.CreateFieldNameAttr(grid)
                 vdbAsset.CreateFieldIndexAttr(0)
                 volumePrim.CreateFieldRelationship(grid, vdbAsset.GetPath())
