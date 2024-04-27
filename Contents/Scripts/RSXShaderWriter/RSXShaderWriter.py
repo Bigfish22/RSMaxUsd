@@ -17,7 +17,8 @@ maxTypeToSdf = {rt.Double : Sdf.ValueTypeNames.Float,
                 rt.point3 : Sdf.ValueTypeNames.Float3,
                 rt.StandardUVGen : Sdf.ValueTypeNames.Token,
                 rt.BitMap : Sdf.ValueTypeNames.Token,
-                rt.point2 : Sdf.ValueTypeNames.Float2}
+                rt.point2 : Sdf.ValueTypeNames.Float2,
+                rt.material : Sdf.ValueTypeNames.Token}
                     
 #Key: maxClass : [Houdini/core Name, Output Pin Name(if the node has multi outputs, we can get this from max]
 maxShaderToRS = {rt.MultiOutputChannelTexmapToTexmap : ["", 'out'],
@@ -147,7 +148,8 @@ maxShaderToRS = {rt.MultiOutputChannelTexmapToTexmap : ["", 'out'],
                 rt.rsVolumeScalarAttribute : ['VolumeScalarAttribute', 'out'],
                 rt.rsToonMaterial : ['ToonMaterial', 'outColor'],
                 rt.rsContour : ['Contour', 'outColor'],
-                rt.rsTonemapPattern : ['TonemapPattern', 'outColor']}
+                rt.rsTonemapPattern : ['TonemapPattern', 'outColor'],
+                rt.rsMaterialOutput : ['', '']}
                     
 PropertyRemaps = {rt.rsOSLMap : {'OSLCode':'RS_osl_code', 'oslFilename':'RS_osl_file', 'oslSource':'RS_osl_source'},
                   rt.rsTexture: {"scale_x" : "scale", "scale_y": "scale", "offset_x" : "offset", "offset_y" : "offset"}}
@@ -183,13 +185,15 @@ class RSShaderWriter(maxUsd.ShaderWriter):
                 materialPrim = UsdShade.Material.Get(self.GetUsdStage(), (self.GetUsdPath()).GetParentPath())
                 materialPrim.CreateSurfaceOutput('Redshift').ConnectToSource(surfaceShader.ConnectableAPI(), "shader")
             
-            
-            nodeShader = UsdShade.Shader.Define(self.GetUsdStage(), (self.GetUsdPath()))
-            nodeShader.CreateIdAttr("redshift::" + maxShaderToRS[rt.classOf(material)][0])
+            if rt.classOf(material) == rt.rsMaterialOutput:
+                nodeShader = surfaceShader
+            else:
+                nodeShader = UsdShade.Shader.Define(self.GetUsdStage(), (self.GetUsdPath()))
+                nodeShader.CreateIdAttr("redshift::" + maxShaderToRS[rt.classOf(material)][0])
             
             if rt.classOf(material) == rt.rsVolume or rt.classOf(material) == rt.rsStandardVolume:
                 surfaceShader.CreateInput('Volume', Sdf.ValueTypeNames.Token).ConnectToSource(nodeShader.ConnectableAPI(), "outColor")
-            else:
+            elif rt.classOf(material) != rt.rsMaterialOutput:
                 surfaceShader.CreateInput('Surface', Sdf.ValueTypeNames.Token).ConnectToSource(nodeShader.ConnectableAPI(), "outColor")
             
             
@@ -298,7 +302,7 @@ class RSShaderWriter(maxUsd.ShaderWriter):
         prim.CreateInput("offset", Sdf.ValueTypeNames.Float2).Set(Gf.Vec2f(value.U_Offset, value.V_Offset))
         
     def AddShader(self, parentPrim, parentNode, prop, propertyOverride = None, nodeOverride = None):
-        if not (str(prop)).endswith(("_map", "p_input")) and nodeOverride == None: #TODO: should probably just be checking if this is a textureMap class, this will catch undefined and properties, assuming superClassOf doesn't fail for undefined.
+        if not (str(prop)).endswith(("_map", "p_input")) and nodeOverride == None and str(prop) not in (('surface', 'Volume', 'contour', 'displacement', 'bumpMap', 'environment')): #TODO: should probably just be checking if this is a textureMap class, this will catch undefined and properties, assuming superClassOf doesn't fail for undefined.
             return
         
         #some node translators might need to provide a specific max node, instead of just the property
@@ -351,6 +355,8 @@ class RSShaderWriter(maxUsd.ShaderWriter):
             parentSdfType = Sdf.ValueTypeNames.Int
         elif rt.superClassOf(getattr(parentNode, tidyProperty)) == rt.textureMap:
             parentSdfType = Sdf.ValueTypeNames.Token
+        elif rt.superClassOf(getattr(parentNode, tidyProperty)) == rt.material:
+            parentSdfType = Sdf.ValueTypeNames.Token
         elif hasattr(parentNode, tidyProperty):
             parentPropertyType = rt.classOf(getattr(parentNode, tidyProperty))
             parentSdfType = maxTypeToSdf[parentPropertyType]
@@ -374,6 +380,8 @@ class RSShaderWriter(maxUsd.ShaderWriter):
     def CleanMapProperty(self, prop):
         tidyProperty = prop.replace("_map", "")
         tidyProperty = tidyProperty[0].lower() + tidyProperty[1:] #were not even going to talk about this
+        if tidyProperty in (('surface', 'volume', 'contour', 'displacement', 'bumpMap', 'environment')):
+            tidyProperty = tidyProperty[0].upper() + tidyProperty[1:]
         return tidyProperty
         
     def AddDisplacement(self, material, surfacePrim):
@@ -490,3 +498,4 @@ maxUsd.ShaderWriter.Register(RSShaderWriter, "RS Incandescent")
 maxUsd.ShaderWriter.Register(RSShaderWriter, "RS Store Color To AOV")
 maxUsd.ShaderWriter.Register(RSShaderWriter, "RS Standard Volume")
 maxUsd.ShaderWriter.Register(RSShaderWriter, "RS Toon Material")
+maxUsd.ShaderWriter.Register(RSShaderWriter, "RS Material Output")
