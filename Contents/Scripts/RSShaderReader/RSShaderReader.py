@@ -150,54 +150,20 @@ class RSShaderReader(maxUsd.ShaderReader):
             
             prim = self.GetUsdPrim() #Turn this into a max material
             
-            surfaceConnection = prim.GetAttribute('inputs:Surface').GetConnections()
-            
-            displacementConnection = prim.GetAttribute('inputs:Displacement').GetConnections()
-            
-            if prim.GetAttribute('inputs:Volume'):
-                volumeConnection = prim.GetAttribute('inputs:Volume').GetConnections()
-                shader = prim.GetPrimAtPath(volumeConnection[0].GetPrimPath())
-            else:    
-                shader = prim.GetPrimAtPath(surfaceConnection[0].GetPrimPath())
-                
-            shaderID = shader.GetAttribute("info:id").Get()
-            
-            if not (shaderID in schemaToMax):
-                print(shaderID, "is not supported by this reader!")
-                return False
-            
-            maxNode = schemaToMax[shaderID]()
+            maxNode = rt.rsMaterialOutput()
             handle = rt.GetHandleByAnim(maxNode)
             
-            
-            for i in shader.GetPropertyNames():
+            for i in prim.GetPropertyNames():
                 if i.startswith('inputs:'):
                     propertyName = i.split(":")[1]
-                    if hasattr(maxNode, propertyName) or hasattr(maxNode, propertyName + "_map"):
-                        usdAttribute = shader.GetAttribute(i)
+                    if hasattr(maxNode, propertyName):
+                        usdAttribute = prim.GetAttribute(i)
                         Connections = usdAttribute.GetConnections()
                         if len(Connections) > 0:
                             MapPropertyName, Map = self.AddNode(prim, propertyName, Connections)
-                            if MapPropertyName:
-                                rt.USDImporter.SetMaterialParamByName(maxNode, MapPropertyName, Map)
-                                continue
-                        value = self.ResolveMaxValue(usdAttribute)
-                        if value:
-                            if propertyName == "tex0":  #SCREAMING
-                                propertyName = "tex0_filename"
-                            try:
-                                rt.USDImporter.SetMaterialParamByName(maxNode, propertyName, value)
-                            except:
-                                print("invalid propert:", propertyName, "with", value)
-                            
-            #plob displacement back in if its a standard material
-            if rt.classOf(maxNode) == rt.rsStandardMaterial:
-                if prim.GetAttribute('inputs:Displacement'):
-                    dispConnections = prim.GetAttribute('inputs:Displacement').GetConnections()
-                    MapPropertyName, Map = self.AddNode(prim, "Displacement_input", dispConnections)
-                    if MapPropertyName:
-                        rt.USDImporter.SetMaterialParamByName(maxNode, MapPropertyName, Map)
-             
+                            rt.USDImporter.SetMaterialParamByName(maxNode, propertyName, Map)
+                
+            
             self.RegisterCreatedMaterial(prim.GetPrimPath(), handle) #Register here and hopefully max will assign the material we made?
             self.MapLibrary[prim] = handle
             return True
@@ -244,6 +210,10 @@ class RSShaderReader(maxUsd.ShaderReader):
             if offsetAttr:
                 maxNode.offset_x = offsetAttr.Get()[0] 
                 maxNode.offset_y = offsetAttr.Get()[1]
+            tex0attr = shader.GetAttribute("inputs:tex0")
+            if tex0attr:
+                if "<UDIM>" in tex0attr.Get().path:
+                    maxNode.tilingmode = 1
         
         for i in shader.GetPropertyNames():
                 if i.startswith('inputs:'):
@@ -260,7 +230,7 @@ class RSShaderReader(maxUsd.ShaderReader):
                                 except:
                                     rt.USDImporter.SetMaterialParamByName(maxNode, ChildMapPropertyName, Map)
                                 continue
-                                    
+                        
                         value = self.ResolveMaxValue(usdAttribute)
                         if value != None:
                             if ChildpropertyName == "tex0":  #SCREAMING
@@ -298,8 +268,9 @@ class RSShaderReader(maxUsd.ShaderReader):
             maxValue = rt.point4(sdfValue[0], sdfValue[1], sdfValue[2], 1)
         if sdfType == Sdf.ValueTypeNames.Asset:
             maxValue = sdfValue.path
-            maxValue = maxValue.replace("<UDIM>", "*")
-            maxValue = glob.glob(maxValue)[0]
+            if "<UDIM>" in maxValue:
+                maxValue = maxValue.replace("<UDIM>", "*")
+                maxValue = glob.glob(maxValue)[0]
         return maxValue
     
     @classmethod
