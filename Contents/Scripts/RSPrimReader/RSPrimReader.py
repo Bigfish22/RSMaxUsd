@@ -1,7 +1,8 @@
 import maxUsd
 from pymxs import runtime as rt
-from pxr import UsdGeom, UsdLux, UsdVol
+from pxr import UsdGeom, UsdLux, UsdVol, UsdShade
 from pxr import Gf as pyGf
+import usd_utils
 import pymxs
 import traceback
 
@@ -23,6 +24,7 @@ class RSLightReader(maxUsd.PrimReader):
             node.intensity = lightPrim.GetIntensityAttr().Get()
             node.exposure = lightPrim.GetExposureAttr().Get()
             if lightPrim.GetEnableColorTemperatureAttr().Get():
+                node.areaShape = 0
                 node.colorMode = 1
                 node.temperature = lightPrim.GetColorTemperatureAttr().Get()
             else:
@@ -161,7 +163,19 @@ class RSProxyPrimReader(maxUsd.PrimReader):
             parentHandle = self.GetJobContext().GetNodeHandle(usdPrim.GetPath().GetParentPath(), False)
             if (parentHandle):
                 parent=rt.GetAnimByHandle(parentHandle)
-
+            
+            #material = UsdShade.MaterialBindingAPI(usdPrim).ComputeBoundMaterial()
+            #if material[0]:
+            #    print(material)
+            #    materialPath = material[0].GetPath().AppendPath("redshift_usd_material").AppendPath("redshift_usd_material1")
+            #    #materialHandle = self.GetJobContext().GetNodeHandle(, False)
+            #    #node.material = rt.getAnimByHandle(materialHandle)
+            #    print(materialPath)
+            #    #print(materialHandle)
+            #    #print(node.material)
+                
+            
+            
             self.GetJobContext().RegisterCreatedNode(usdPrim.GetPath(), rt.GetHandleByAnim(node))
             self.ReadXformable()
             
