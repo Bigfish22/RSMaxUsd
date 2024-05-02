@@ -2,7 +2,7 @@ import maxUsd
 import usd_utils
 import pymxs
 from pymxs import runtime as rt
-from pxr import UsdShade, Sdf, Gf
+from pxr import UsdShade, Sdf, Gf, Vt
 import RSPreviewWriter
 import usd_utils
 import traceback
@@ -142,6 +142,7 @@ maxShaderToRS = {rt.MultiOutputChannelTexmapToTexmap : ["", 'out'],
                 rt.rsStoreColorToAOV : ['StoreColorToAOV', 'outColor'],
                 rt.rsColorCorrection : ['RSColorCorrection', 'outColor'],
                 rt.CompositeMap :      ['RSColorLayer', 'outColor'],
+                rt.Gradient_Ramp :     ['RSRamp', 'outColor'],
                 rt.VertexColor  :      ['RSUserDataColor', 'out'],
                 rt.rsStandardVolume :  ['StandardVolume', 'outColor'],
                 rt.rsVolumeColorAttribute : ['VolumeColorAttribute', 'outColor'],
@@ -472,7 +473,47 @@ class RSShaderWriter(maxUsd.ShaderWriter):
         parentPrim.CreateInput(self.CleanMapProperty(propertName), Sdf.ValueTypeNames.Token).ConnectToSource(usdShader.ConnectableAPI(), "outColor")
         
     def NodeTranslateGradientRamp(self, parentPrim, parentNode, node, propertName):
-        pass
+        primName = node.name.replace(" ", "_").replace("#", "_")
+        usdShader = UsdShade.Shader.Define(self.GetUsdStage(), ((self.GetUsdPath()).GetParentPath()).AppendPath(primName))
+        usdShader.CreateIdAttr("redshift::RSRamp")
+        
+        knotCount = 0
+        interp = []
+        positions = []
+        values = []
+        
+        interType = "linear"
+        #This cant be accessed from maxscript..
+        
+        
+        endColor = 0
+        for knotName in rt.getPropNames(node.Gradient_Ramp):
+            knotCount += 1
+            knot = getattr(node.Gradient_Ramp, str(knotName))
+            #knot 1 and 2 are always the first and last, the others are by order added
+            if knotCount == 1:
+                values.append((knot.color.x/255, knot.color.y/255, knot.color.z/255))
+                interp.append(interType)
+                positions.append(0.0)
+            elif knotCount == 2:
+                endColor = ((knot.color.x/255, knot.color.y/255, knot.color.z/255))
+            elif knotCount > 2:
+                interp.append(interType)
+                positions.append(knot.position / 100)
+                values.append((knot.color.x/255, knot.color.y/255, knot.color.z/255))
+                
+        positions.append(1.0)
+        interp.append(interType)
+        values.append(endColor)
+        
+        usdShader.CreateInput("inputInvert", Sdf.ValueTypeNames.Int).Set(0)
+        usdShader.CreateInput("inputMapping", Sdf.ValueTypeNames.Token).Set('1') #to go the same direction as max, also why is this a token?
+        
+        usdShader.CreateInput("ramp", Sdf.ValueTypeNames.Int).Set(knotCount)
+        usdShader.CreateInput("ramp_basis", Sdf.ValueTypeNames.TokenArray).Set(Vt.TokenArray(interp))
+        usdShader.CreateInput("ramp_keys", Sdf.ValueTypeNames.FloatArray).Set(Vt.FloatArray(positions))
+        usdShader.CreateInput("ramp_values", Sdf.ValueTypeNames.Color3fArray).Set(Vt.Vec3fArray(values))
+        parentPrim.CreateInput(self.CleanMapProperty(propertName), Sdf.ValueTypeNames.Token).ConnectToSource(usdShader.ConnectableAPI(), "outColor")
         
     def NodeTranslateVertexColor(self, parentPrim, parentNode, node, propertName):
         primName = node.name.replace(" ", "_").replace("#", "_")
