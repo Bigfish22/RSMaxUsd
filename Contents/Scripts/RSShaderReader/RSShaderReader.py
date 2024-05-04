@@ -143,12 +143,10 @@ schemaToMax = {'redshift::': rt.MultiOutputChannelTexmapToTexmap,
 PropertyRemaps = {rt.rsOSLMap : {'OSLCode':'RS_osl_code', 'oslFilename':'RS_osl_file', 'oslSource':'RS_osl_source'},
                   rt.rsTexture: {"scale_x" : "scale", "scale_y": "scale", "offset_x" : "offset", "offset_y" : "offset"}}
                       
-class RSShaderReader(maxUsd.ShaderReader):
-    def Read(self):
+class RSShaderReaderBase():
+    def Read(self, prim):
         try:
             self.MapLibrary = {}
-            
-            prim = self.GetUsdPrim() #Turn this into a max material
             
             maxNode = rt.rsMaterialOutput()
             handle = rt.GetHandleByAnim(maxNode)
@@ -164,9 +162,8 @@ class RSShaderReader(maxUsd.ShaderReader):
                             rt.USDImporter.SetMaterialParamByName(maxNode, propertyName, Map)
                 
             
-            self.RegisterCreatedMaterial(prim.GetPrimPath(), handle) #Register here and hopefully max will assign the material we made?
             self.MapLibrary[prim] = handle
-            return True
+            return handle
             
         except Exception as e:
             # Quite useful to debug errors in a Python callback
@@ -280,6 +277,20 @@ class RSShaderReader(maxUsd.ShaderReader):
         return str(resolvedPath)
         
     
+    @classmethod
+    def CanImport(cls, importArgs):
+        return maxUsd.ShaderReader.ContextSupport.Supported
+        
+
+class RSShaderReader(maxUsd.ShaderReader):
+    def Read(self):
+        reader = RSShaderReaderBase()
+        prim = self.GetUsdPrim() #Turn this into a max material
+        handle = reader.Read(prim)
+        
+        self.RegisterCreatedMaterial(prim.GetPrimPath(), handle) #Register here and hopefully max will assign the material we made?
+        return True
+        
     @classmethod
     def CanImport(cls, importArgs):
         return maxUsd.ShaderReader.ContextSupport.Supported

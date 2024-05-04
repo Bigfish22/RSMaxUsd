@@ -4,6 +4,7 @@ from pxr import UsdGeom, UsdLux, UsdVol, UsdShade, Ar
 import usd_utils
 import pymxs
 import traceback
+import RSShaderReader
 
 
 class RSLightReader(maxUsd.PrimReader):
@@ -163,9 +164,9 @@ class RSProxyPrimReader(maxUsd.PrimReader):
             if (parentHandle):
                 parent=rt.GetAnimByHandle(parentHandle)
             
-            #material = UsdShade.MaterialBindingAPI(usdPrim).ComputeBoundMaterial()
-            #if material[0]:
-            #    print(material)
+            material = UsdShade.MaterialBindingAPI(usdPrim).ComputeBoundMaterial()
+            if material[0]:
+                print(material)
             #    materialPath = material[0].GetPath().AppendPath("redshift_usd_material").AppendPath("redshift_usd_material1")
             #    #materialHandle = self.GetJobContext().GetNodeHandle(, False)
             #    #node.material = rt.getAnimByHandle(materialHandle)
@@ -208,6 +209,22 @@ class RSVolumeReader(maxUsd.PrimReader):
             parentHandle = self.GetJobContext().GetNodeHandle(usdPrim.GetPath().GetParentPath(), False)
             if (parentHandle):
                 parent=rt.GetAnimByHandle(parentHandle)
+                
+            try:
+                material = UsdShade.MaterialBindingAPI(usdPrim).ComputeBoundMaterial()
+                if material[0]:
+                    redshift_usd_mat = material[0].GetSurfaceOutput("Redshift").GetConnectedSources()[0][0].source.GetPrim()
+                    if redshift_usd_mat.GetTypeName() == "NodeGraph":
+                        usdAttribute = redshift_usd_mat.GetAttribute("outputs:shader")
+                        Connections = usdAttribute.GetConnections()
+                        redshift_usd_mat = redshift_usd_mat.GetPrimAtPath(Connections[0].GetPrimPath())
+                    reader = RSShaderReader.RSShaderReaderBase()
+                    materialHandle = reader.Read(redshift_usd_mat)
+                    
+                    node.material = rt.getAnimByHandle(materialHandle)
+            except:
+                print("Failed to import volume shader")
+            
             
             self.GetJobContext().RegisterCreatedNode(usdPrim.GetPath(), rt.GetHandleByAnim(node))
             self.ReadXformable()
