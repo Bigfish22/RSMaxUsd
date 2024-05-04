@@ -1,6 +1,6 @@
 import maxUsd
 from pymxs import runtime as rt
-from pxr import UsdShade, Sdf
+from pxr import UsdShade, Sdf, Ar
 import usd_utils
 import pymxs
 import traceback
@@ -271,7 +271,14 @@ class RSShaderReader(maxUsd.ShaderReader):
             if "<UDIM>" in maxValue:
                 maxValue = maxValue.replace("<UDIM>", "*")
                 maxValue = glob.glob(maxValue)[0]
+            maxValue = self.ResolveAsset(maxValue)
         return maxValue
+        
+    def ResolveAsset(self, assetPath):
+        resolver = Ar.GetResolver()
+        resolvedPath = resolver.Resolve(assetPath)
+        return str(resolvedPath)
+        
     
     @classmethod
     def CanImport(cls, importArgs):

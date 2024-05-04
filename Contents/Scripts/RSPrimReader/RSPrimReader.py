@@ -1,7 +1,6 @@
 import maxUsd
 from pymxs import runtime as rt
-from pxr import UsdGeom, UsdLux, UsdVol, UsdShade
-from pxr import Gf as pyGf
+from pxr import UsdGeom, UsdLux, UsdVol, UsdShade, Ar
 import usd_utils
 import pymxs
 import traceback
@@ -203,7 +202,7 @@ class RSVolumeReader(maxUsd.PrimReader):
             gridDict = UsdVolume.GetFieldPaths()
             for grid in gridDict:
                 VdbPrim = UsdVol.OpenVDBAsset(usdPrim.GetStage().GetPrimAtPath(gridDict[grid]))
-                node.file = VdbPrim.GetFilePathAttr().Get().path
+                node.file = ResolveAsset(VdbPrim.GetFilePathAttr().Get().path)
                 break
                 
             parentHandle = self.GetJobContext().GetNodeHandle(usdPrim.GetPath().GetParentPath(), False)
@@ -221,6 +220,11 @@ class RSVolumeReader(maxUsd.PrimReader):
             print(traceback.format_exc())
             return False
 
+
+def ResolveAsset(assetPath):
+    resolver = Ar.GetResolver()
+    resolvedPath = resolver.Resolve(assetPath)
+    return str(resolvedPath)
 
 maxUsd.PrimReader.Register(RSLightReader, "UsdLuxRectLight")
 maxUsd.PrimReader.Register(RSLightReader, "UsdLuxDiskLight")
