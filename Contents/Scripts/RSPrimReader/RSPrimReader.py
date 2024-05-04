@@ -162,7 +162,7 @@ class RSProxyPrimReader(maxUsd.PrimReader):
             
             parentHandle = self.GetJobContext().GetNodeHandle(usdPrim.GetPath().GetParentPath(), False)
             if (parentHandle):
-                parent=rt.GetAnimByHandle(parentHandle)
+                node.parent=rt.GetAnimByHandle(parentHandle)
             
             material = UsdShade.MaterialBindingAPI(usdPrim).ComputeBoundMaterial()
             if material[0]:
@@ -208,7 +208,7 @@ class RSVolumeReader(maxUsd.PrimReader):
                 
             parentHandle = self.GetJobContext().GetNodeHandle(usdPrim.GetPath().GetParentPath(), False)
             if (parentHandle):
-                parent=rt.GetAnimByHandle(parentHandle)
+                node.parent=rt.GetAnimByHandle(parentHandle)
                 
             try:
                 material = UsdShade.MaterialBindingAPI(usdPrim).ComputeBoundMaterial()
