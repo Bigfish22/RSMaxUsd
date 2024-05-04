@@ -59,6 +59,13 @@ class RSRenderSettingsChaser(maxUsd.ExportChaser):
             colorAov.CreateSourceNameAttr().Set("color")
             colorAov.CreateDataTypeAttr().Set("color4f")
             colorAov.CreateSourceTypeAttr().Set("raw")
+            
+            colorAov.GetPrim().CreateAttribute("driver:parameters:aov:clearValue", Sdf.ValueTypeNames.Int).Set(0)
+            colorAov.GetPrim().CreateAttribute("driver:parameters:aov:format", Sdf.ValueTypeNames.Token).Set("color4h")
+            colorAov.GetPrim().CreateAttribute("driver:parameters:aov:multiSampled", Sdf.ValueTypeNames.Bool).Set(False)
+            colorAov.GetPrim().CreateAttribute("driver:parameters:aov:name", Sdf.ValueTypeNames.String).Set("rgba")
+            
+            
             orderedVarsRel = renderProduct.GetOrderedVarsRel()
             orderedVarsRel.AddTarget("/Render/Products/Vars/color")
             
