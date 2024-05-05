@@ -186,6 +186,10 @@ class RSShaderReaderBase():
             maxNode = schemaToMax[shaderID]()
             maxNode.name = shaderName
             
+        map = True
+        if rt.superclassof(maxNode) == rt.material:
+            map = False
+            
         MapPropertyName = propertyName
         if not propertyName.endswith("_input"):
             MapPropertyName = propertyName + "_map"
@@ -222,9 +226,9 @@ class RSShaderReaderBase():
                             ChildMapPropertyName, Map = self.AddNode(prim, ChildpropertyName, Connections)
                             if ChildMapPropertyName:
                                 #probably fix this later, it should probably still be faster if mostly it hits texmaps first
-                                try:
+                                if map:
                                     rt.USDImporter.SetTexmapParamByName(maxNode, ChildMapPropertyName, Map)
-                                except:
+                                else:
                                     rt.USDImporter.SetMaterialParamByName(maxNode, ChildMapPropertyName, Map)
                                 continue
                         
@@ -234,9 +238,12 @@ class RSShaderReaderBase():
                                 ChildpropertyName = "tex0_filename"
                             if getattr(maxNode, ChildpropertyName) != None:
                                 try:
-                                    rt.USDImporter.SetTexmapParamByName(maxNode, ChildpropertyName, value)
+                                    if map:
+                                        rt.USDImporter.SetTexmapParamByName(maxNode, ChildpropertyName, value)
+                                    else:
+                                        rt.USDImporter.SetMaterialParamByName(maxNode, ChildpropertyName, value)
                                 except:
-                                    rt.USDImporter.SetMaterialParamByName(maxNode, ChildpropertyName, value)
+                                    print("Invalid property:", ChildpropertyName, "with", value)
                                 
                                 
         self.MapLibrary[shader] = rt.getHandleByAnim(maxNode)
