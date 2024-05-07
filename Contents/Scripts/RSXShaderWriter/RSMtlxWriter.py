@@ -29,7 +29,6 @@ class RSMtlxWriter(maxUsd.ShaderWriter):
             return True
 
         except Exception as e:
-            # Quite useful to debug errors in a Python callback
             print('Write() - Error: %s' % str(e))
             print(traceback.format_exc())
             
@@ -39,5 +38,4 @@ class RSMtlxWriter(maxUsd.ShaderWriter):
             return maxUsd.ShaderWriter.ContextSupport.Supported
         return maxUsd.ShaderWriter.ContextSupport.Unsupported
 
-# Register the writer.
 maxUsd.ShaderWriter.Register(RSMtlxWriter, "RS Standard Material")

@@ -104,16 +104,11 @@ class RSLightWriter(maxUsd.PrimWriter):
             return True
 
         except Exception as e:
-            # Quite useful to debug errors in a Python callback
-            print('Write() - Error: %s' % str(e))
+            print('Write - Error: %s' % str(e))
             print(traceback.format_exc())
             return False
 
     def GetValidityInterval(self, timeFrame):
-        # The base implementation of GetValidityInterval() will return the object's validity interval.
-        # So the write() method would only be called when the object changes. 
-        # for demonstration purposes, lets force the exporter to call the object's write every frame, 
-        # by telling it that what we export at each frame is only valid at that exact frame.
         return maxUsd.Interval(timeFrame,timeFrame)
 
     @classmethod
@@ -155,7 +150,6 @@ class RSSunWriter(maxUsd.PrimWriter):
             return True
             
         except Exception as e:
-            # Quite useful to debug errors in a Python callback
             print('Write() - Error: %s' % str(e))
             print(traceback.format_exc())
             return False
@@ -192,7 +186,6 @@ class RSProxyWriter(maxUsd.PrimWriter):
             return True
 
         except Exception as e:
-            # Quite useful to debug errors in a Python callback
             print('Write() - Error: %s' % str(e))
             print(traceback.format_exc())
             return False
@@ -239,7 +232,6 @@ class RSVolumeWriter(maxUsd.PrimWriter):
             return True
    
         except Exception as e:
-            # Quite useful to debug errors in a Python callback
             print('Write() - Error: %s' % str(e))
             print(traceback.format_exc())
             return False

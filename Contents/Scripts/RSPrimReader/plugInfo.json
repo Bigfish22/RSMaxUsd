@@ -5,10 +5,11 @@
             "MaxUsd":{
                 "PrimReader" : {
                     "providesTranslator": [
+                        "UsdGeomXformable",
                         "UsdLuxRectLight",
-						"UsdLuxDiskLight",
-						"UsdLuxSphereLight",
-						"UsdLuxCylinderLight",
+                        "UsdLuxDiskLight",
+                        "UsdLuxSphereLight",
+                        "UsdLuxCylinderLight",
                         "UsdLuxDomeLight",
                         "UsdLuxDistantLight",
                         "UsdRedshiftProxy",

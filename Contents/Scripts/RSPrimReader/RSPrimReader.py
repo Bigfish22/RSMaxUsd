@@ -2,10 +2,31 @@ import maxUsd
 from pymxs import runtime as rt
 from pxr import UsdGeom, UsdLux, UsdVol, UsdShade, Ar
 import usd_utils
-import pymxs
 import traceback
 import RSShaderReader
 
+rsLightAttrMap = {'redshift:light:RSL_visible': 'areavisible',
+                'redshift:light:RSL_bidirectional': 'areabidirectional',
+                'redshift:light:RSL_spread': 'areaspread',
+                'redshift:light:RSL_matteShadow': 'matteshadowilluminator',
+                'redshift:light:RSL_affectedByRefraction': 'affectedbyrefraction',
+                'redshift:light:RSL_indirectMaxTraceDepth': 'indirectmaxtracedepth',
+                'redshift:light:RSL_transmissionScale': 'transmissionscale',
+                'redshift:light:RSL_sssScale': 'singlescatteringscale',
+                'redshift:light:RSL_multisssScale': 'multiplescatteringscale',
+                'redshift:light:RSL_indirectScale': 'indirectscale',
+                'redshift:light:RSL_volumeScale': 'volumecontributionscale',
+                'redshift:light:RSL_volumeSamples': 'volumesamples',
+                'redshift:light:RSL_lightGroup': 'aovLightGroup',
+                'redshift:light:RSL_samples': 'areasamples',
+                'redshift:light:RSL_emitCausticPhotons': 'causticphotonemit',
+                'redshift:light:RSL_causticIntensity': 'causticphotonmultiplier',
+                'redshift:light:RSL_causticPhotons': 'causticphotoncount',
+                'redshift:light:RSL_softnessAffectsGobo': 'softnessAffectsGobo',
+                'redshift:light:SetEnableLegacyNonAreaLightIntensity': 'legacyNonAreaLightIntensity',
+                'redshift:light:SetEnableLegacySoftShadowTechnique': 'legacySoftShadowTechnique',
+                'redshift:light:unitsType': 'unitsType',
+                'redshift:light:lumensperwatt': 'lumensperwatt'}
 
 class RSLightReader(maxUsd.PrimReader):
     def Read(self):
@@ -47,6 +68,11 @@ class RSLightReader(maxUsd.PrimReader):
                 node.areaShape = 3
                 node.width = lightPrim.GetRadiusAttr().Get()
                 node.length = lightPrim.GetLengthAttr().Get()
+                
+            for attrName in rsLightAttrMap:
+                attr = usdPrim.GetAttribute(attrName)
+                if attr:
+                    rt.setProperty(node, rsLightAttrMap[attrName], attr.Get())
 
             self.GetJobContext().RegisterCreatedNode(usdPrim.GetPath(), rt.GetHandleByAnim(node))
             self.ReadXformable()
@@ -54,14 +80,13 @@ class RSLightReader(maxUsd.PrimReader):
             return True
 
         except Exception as e:
-            # Quite useful to debug errors in a Python callback
-            print('Read() - Error: %s' % str(e))
+            print('Read - Error: %s' % str(e))
             print(traceback.format_exc())
             return False
             
     @classmethod
     def CanImport(cls, args, prim):
-        #Need to check if we are in a redshift import context.
+        #TODO: Need to check if we are in a redshift import context.
         return maxUsd.PrimReader.ContextSupport.Supported
  
  
@@ -87,14 +112,13 @@ class RSDomeReader(maxUsd.PrimReader):
             return True
 
         except Exception as e:
-            # Quite useful to debug errors in a Python callback
-            print('Read() - Error: %s' % str(e))
+            print('Read - Error: %s' % str(e))
             print(traceback.format_exc())
             return False
             
     @classmethod
     def CanImport(cls, args, prim):
-        #Need to check if we are in a redshift import context.
+        #TODO: Need to check if we are in a redshift import context.
         return maxUsd.PrimReader.ContextSupport.Supported
    
    
@@ -119,7 +143,7 @@ class RSSunSkyReader(maxUsd.PrimReader):
                     PhysicalSky = rt.rsPhysicalSky()
                     sun_node = node
                     
-                    #Set all the sky properties on the light/and physical sky
+                    #TODO: Set all the sky properties on the light/and physical sky
                     
                     rt.environmentMap = PhysicalSky
             
@@ -128,8 +152,7 @@ class RSSunSkyReader(maxUsd.PrimReader):
             return True
             
         except Exception as e:
-            # Quite useful to debug errors in a Python callback
-            print('Read() - Error: %s' % str(e))
+            print('Read - Error: %s' % str(e))
             print(traceback.format_exc())
             return False
             
@@ -163,18 +186,7 @@ class RSProxyPrimReader(maxUsd.PrimReader):
             parentHandle = self.GetJobContext().GetNodeHandle(usdPrim.GetPath().GetParentPath(), False)
             if (parentHandle):
                 node.parent=rt.GetAnimByHandle(parentHandle)
-            
-            material = UsdShade.MaterialBindingAPI(usdPrim).ComputeBoundMaterial()
-            if material[0]:
-                print(material)
-            #    materialPath = material[0].GetPath().AppendPath("redshift_usd_material").AppendPath("redshift_usd_material1")
-            #    #materialHandle = self.GetJobContext().GetNodeHandle(, False)
-            #    #node.material = rt.getAnimByHandle(materialHandle)
-            #    print(materialPath)
-            #    #print(materialHandle)
-            #    #print(node.material)
-                
-            
+                   
             
             self.GetJobContext().RegisterCreatedNode(usdPrim.GetPath(), rt.GetHandleByAnim(node))
             self.ReadXformable()
@@ -182,8 +194,7 @@ class RSProxyPrimReader(maxUsd.PrimReader):
             return True
 
         except Exception as e:
-            # Quite useful to debug errors in a Python callback
-            print('Read() - Error: %s' % str(e))
+            print('Read - Error: %s' % str(e))
             print(traceback.format_exc())
             return False
    
@@ -232,8 +243,7 @@ class RSVolumeReader(maxUsd.PrimReader):
             return True
             
         except Exception as e:
-            # Quite useful to debug errors in a Python callback
-            print('Read() - Error: %s' % str(e))
+            print('Read - Error: %s' % str(e))
             print(traceback.format_exc())
             return False
 

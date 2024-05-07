@@ -1,24 +1,15 @@
-# Job Contexts allow to customize several options during a maxUsd export
-#   - 'chaser'
-#   - 'chaserArgs'
-#   - 'convertMaterialsTo'
-#
-# This sample will add a "Custom Context Demo" option in the "PlugIn configuration" drop down in maxUsd exports
 def RSShaderWriterContext():
-    # build a dictionary of the options to set using the context
     extraArgs = {}
     extraArgs['chaser']  = ['RSObjectProperties']
     extraArgs['convertMaterialsTo']  = ['redshift_usd_material']
     return extraArgs
 
 def RSRenderSettingsContext():
-    # build a dictionary of the options to set using the context
     extraArgs = {}
     extraArgs['chaser']  = ['RSRenderSettingsChaser']
     return extraArgs
     
 def RSmtlxWriterContext():
-    # build a dictionary of the options to set using the context
     extraArgs = {}
     extraArgs['chaser']  = ['RSObjectProperties']
     extraArgs['convertMaterialsTo']  = ['mtlxstandard_surface']

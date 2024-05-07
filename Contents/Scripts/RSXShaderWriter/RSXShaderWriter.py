@@ -207,8 +207,7 @@ class RSShaderWriter(maxUsd.ShaderWriter):
             return True
 
         except Exception as e:
-            # Quite useful to debug errors in a Python callback
-            print('Write() - Error: %s' % str(e))
+            print('Write - Error: %s' % str(e))
             print(traceback.format_exc())
             
     def AddProperty(self, prim, node, prop, template):

@@ -85,7 +85,6 @@ class RSImportChaser(maxUsd.ImportChaser):
 
 
         except Exception as e:
-            # Quite useful to debug errors in a Python callback
             print('Write() - Error: %s' % str(e))
             print(traceback.format_exc())
             return False

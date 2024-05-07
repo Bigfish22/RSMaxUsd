@@ -65,8 +65,7 @@ class RSPreviewWriter(maxUsd.ShaderWriter):
             return True
 
         except Exception as e:
-            # Quite useful to debug errors in a Python callback
-            print('Write() - Error: %s' % str(e))
+            print('Write - Error: %s' % str(e))
             print(traceback.format_exc())
             
     def AddTexture(self, prim, property, parentNode):
@@ -105,5 +104,4 @@ class RSPreviewWriter(maxUsd.ShaderWriter):
             return maxUsd.ShaderWriter.ContextSupport.Supported
         return maxUsd.ShaderWriter.ContextSupport.Unsupported
 
-# Register the writer.
 maxUsd.ShaderWriter.Register(RSPreviewWriter, "RS Standard Material")

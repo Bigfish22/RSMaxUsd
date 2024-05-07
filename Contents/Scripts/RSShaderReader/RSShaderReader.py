@@ -2,7 +2,6 @@ import maxUsd
 from pymxs import runtime as rt
 from pxr import UsdShade, Sdf, Ar
 import usd_utils
-import pymxs
 import traceback
 import glob
 
@@ -166,7 +165,6 @@ class RSShaderReaderBase():
             return handle
             
         except Exception as e:
-            # Quite useful to debug errors in a Python callback
             print('Write() - Error: %s' % str(e))
             print(traceback.format_exc())
             
@@ -225,7 +223,6 @@ class RSShaderReaderBase():
                         if len(Connections) > 0:
                             ChildMapPropertyName, Map = self.AddNode(prim, ChildpropertyName, Connections)
                             if ChildMapPropertyName:
-                                #probably fix this later, it should probably still be faster if mostly it hits texmaps first
                                 if map:
                                     rt.USDImporter.SetTexmapParamByName(maxNode, ChildMapPropertyName, Map)
                                 else:

@@ -81,8 +81,7 @@ class RSRenderSettingsChaser(maxUsd.ExportChaser):
 
             
         except Exception as e:
-            # Quite useful to debug errors in a Python callback
-            print('Write() - Error: %s' % str(e))
+            print('Write - Error: %s' % str(e))
             print(traceback.format_exc())
             return False
         
@@ -105,6 +104,5 @@ class RSRenderSettingsChaser(maxUsd.ExportChaser):
             return
         return
             
-        
         
 maxUsd.ExportChaser.Register(RSRenderSettingsChaser, "RSRenderSettingsChaser", "Redshift object Properties", "Chaser to export RS Object properties")

@@ -32,6 +32,5 @@
        )
        
        addRSXShaderWriterPlugin()
-	   print("RS USD material Export registered")
    )
 )

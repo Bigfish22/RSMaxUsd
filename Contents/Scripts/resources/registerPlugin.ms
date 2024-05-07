@@ -26,6 +26,5 @@
        )
        
        addRSSchema()
-	   print("RS USD Schema registered")
    )
 )

@@ -11,7 +11,8 @@
               "RS Material Blender",
               "RS Volume",
               "RS Incandescent",
-              "RS Store Color To AOV"
+              "RS Store Color To AOV",
+              "RS Material Output"
             ]
           },
           "JobContextPlugin": {}

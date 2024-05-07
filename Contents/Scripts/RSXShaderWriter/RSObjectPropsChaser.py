@@ -1,6 +1,5 @@
-
 import maxUsd
-from pxr import Usd, Sdf
+from pxr import Usd, Sdf, UsdRender, UsdGeom
 from pymxs import runtime as rt
 import traceback
 
@@ -153,13 +152,12 @@ class RSObjectPropertiesChaser(maxUsd.ExportChaser):
     def __init__(self, factoryContext, *args, **kwargs):
         super(RSObjectPropertiesChaser, self).__init__(factoryContext, *args, **kwargs)
         self.primsToNodeHandles = factoryContext.GetPrimsToNodeHandles()
-        #self.nodeHandlesToPrims = dict((v, k) for k, v in self.primsToNodeHandles.items())
 
-        # retrieve the USD stage being written to
         self.stage = factoryContext.GetStage()
         
     def PostExport(self):
         try:
+            
             for prim_path, node_handle in self.primsToNodeHandles.items():
                 node = rt.maxOps.getNodeByHandle(node_handle)
                 prim = self.stage.GetPrimAtPath(prim_path)
@@ -187,7 +185,7 @@ class RSObjectPropertiesChaser(maxUsd.ExportChaser):
                         
                         focusObject = mod.optical.focusObject
                         if focusObject:
-                            handle = rt.getHandleByAnim(focusObject)
+                            handle = focusObject.handle
                 
                 #write user props if they exist
                 for prop in rsObjectProps:
@@ -198,12 +196,12 @@ class RSObjectPropertiesChaser(maxUsd.ExportChaser):
                     prim.CreateAttribute(rsObjectProps[prop], maxTypeToSdf[type]).Set(self.resolveValue(userProp, type))
                     
         except Exception as e:
-            # Quite useful to debug errors in a Python callback
             print('Write() - Error: %s' % str(e))
             print(traceback.format_exc())
             return False
         
         return True
+        
         
     def resolveValue(self, value, type):
         if type == rt.Color:
