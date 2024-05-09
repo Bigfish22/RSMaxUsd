@@ -22,6 +22,7 @@ import glob
 maxTypeToSdf = {Sdf.ValueTypeNames.Float : rt.Double,
                 Sdf.ValueTypeNames.Int : rt.Integer,
                 Sdf.ValueTypeNames.Color3f : rt.Color,
+                Sdf.ValueTypeNames.Color4f : rt.Color,
                 Sdf.ValueTypeNames.Bool : rt.BooleanClass,
                 Sdf.ValueTypeNames.String : rt.string,
                 Sdf.ValueTypeNames.Float3 : rt.point3,
@@ -278,10 +279,13 @@ class RSShaderReaderBase():
         sdfValue = usdAttr.Get()
         if sdfValue == None:
             return None
+            
         maxValue = sdfValue
         if sdfType == Sdf.ValueTypeNames.Color3f or sdfType == Sdf.ValueTypeNames.Float3:
             maxValue = rt.point4(sdfValue[0], sdfValue[1], sdfValue[2], 1)
-        if sdfType == Sdf.ValueTypeNames.Asset:
+        elif sdfType == Sdf.ValueTypeNames.Color4f:
+            maxValue = rt.point4(sdfValue[0], sdfValue[1], sdfValue[2], sdfValue[3])
+        elif sdfType == Sdf.ValueTypeNames.Asset:
             maxValue = sdfValue.path
             if "<UDIM>" in maxValue:
                 maxValue = maxValue.replace("<UDIM>", "*")
