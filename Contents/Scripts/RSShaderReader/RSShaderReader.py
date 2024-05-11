@@ -165,16 +165,13 @@ class RSShaderReaderBase():
             maxNode = rt.rsMaterialOutput()
             handle = rt.GetHandleByAnim(maxNode)
             
-            for i in prim.GetPropertyNames():
-                if i.startswith('inputs:'):
-                    propertyName = i.split(":")[1]
-                    if hasattr(maxNode, propertyName):
-                        usdAttribute = prim.GetAttribute(i)
-                        Connections = usdAttribute.GetConnections()
-                        if len(Connections) > 0:
-                            MapPropertyName, Map = self.AddNode(prim, propertyName, Connections)
-                            rt.USDImporter.SetMaterialParamByName(maxNode, propertyName, Map)
-                
+            shaderPrim = UsdShade.Shader(prim)
+            for input in shaderPrim.GetInputs():
+                connections = input.GetAttr().GetConnections()
+                propertyName = input.GetBaseName()
+                if len(connections) > 0 and hasattr(maxNode, propertyName):
+                    MapPropertyName, Map = self.AddNode(prim, propertyName, connections)
+                    rt.USDImporter.SetMaterialParamByName(maxNode, propertyName, Map)
             
             self.MapLibrary[prim] = handle
             return handle
@@ -228,34 +225,33 @@ class RSShaderReaderBase():
             if tex0attr:
                 if "<UDIM>" in tex0attr.Get().path:
                     maxNode.tilingmode = 1
-        
-        for i in shader.GetPropertyNames():
-                if i.startswith('inputs:'):
-                    ChildpropertyName = i.split(":")[1]
-                    if hasattr(maxNode, ChildpropertyName) or hasattr(maxNode, ChildpropertyName + "_map"):
-                        usdAttribute = shader.GetAttribute(i)
-                        Connections = usdAttribute.GetConnections()
-                        if len(Connections) > 0:
-                            ChildMapPropertyName, Map = self.AddNode(prim, ChildpropertyName, Connections)
-                            if ChildMapPropertyName:
-                                if map:
-                                    rt.USDImporter.SetTexmapParamByName(maxNode, ChildMapPropertyName, Map)
-                                else:
-                                    rt.USDImporter.SetMaterialParamByName(maxNode, ChildMapPropertyName, Map)
-                                continue
-                        
-                        value = self.ResolveMaxValue(usdAttribute)
-                        if value != None:
-                            if ChildpropertyName == "tex0":  #SCREAMING
-                                ChildpropertyName = "tex0_filename"
-                            if getattr(maxNode, ChildpropertyName) != None:
-                                try:
-                                    if map:
-                                        rt.USDImporter.SetTexmapParamByName(maxNode, ChildpropertyName, value)
-                                    else:
-                                        rt.USDImporter.SetMaterialParamByName(maxNode, ChildpropertyName, value)
-                                except:
-                                    print("Invalid property:", ChildpropertyName, "with", value)
+
+        shaderPrim = UsdShade.Shader(shader)
+        for input in shaderPrim.GetInputs():
+            connections = input.GetAttr().GetConnections()
+            ChildpropertyName = input.GetBaseName()
+            if hasattr(maxNode, ChildpropertyName) or hasattr(maxNode, ChildpropertyName + "_map"):
+                if len(connections) > 0:
+                    ChildMapPropertyName, Map = self.AddNode(prim, ChildpropertyName, connections)
+                    if ChildMapPropertyName:
+                        if map:
+                            rt.USDImporter.SetTexmapParamByName(maxNode, ChildMapPropertyName, Map)
+                        else:
+                            rt.USDImporter.SetMaterialParamByName(maxNode, ChildMapPropertyName, Map)
+                        continue
+                    
+                value = self.ResolveMaxValue(input.GetAttr())
+                if value != None:
+                    if ChildpropertyName == "tex0":  #SCREAMING
+                        ChildpropertyName = "tex0_filename"
+                    if getattr(maxNode, ChildpropertyName) != None:
+                        try:
+                            if map:
+                                rt.USDImporter.SetTexmapParamByName(maxNode, ChildpropertyName, value)
+                            else:
+                                rt.USDImporter.SetMaterialParamByName(maxNode, ChildpropertyName, value)
+                        except:
+                            print("Invalid property:", ChildpropertyName, "with", value)
                                 
                                 
         self.MapLibrary[shader] = rt.getHandleByAnim(maxNode)
