@@ -57,6 +57,17 @@ class RSPreviewWriter(maxUsd.ShaderWriter):
             nodeShader = UsdShade.Shader.Define(self.GetUsdStage(), self.GetUsdPath())
             nodeShader.CreateIdAttr("UsdPreviewSurface")
             
+            if rt.classOf(material) == rt.rsSprite:
+                material = material.Input_map
+            
+            if rt.classOf(material) == rt.rsMaterialOutput:
+                if rt.classOf(material.Surface) == rt.rsStandardMaterial:
+                    material = material.Surface
+                elif rt.classOf(material.Surface) == rt.rsSprite:
+                    material = material.Input_map
+                else:
+                    return False
+            
             for usdProp, valueName in valueMapping.items():
                 value = rt.getProperty(material, valueName)
                 type = rt.classOf(value)
@@ -86,7 +97,8 @@ class RSPreviewWriter(maxUsd.ShaderWriter):
         node = getattr(parentNode, property)
         primName = node.name.replace(" ", "_").replace("#", "_")
         filePath = node.tex0_filename
-        filePath = re.sub("1[0-9]{3}", "<UDIM>", filePath)
+        if node.tilingmode == 1:
+            filePath = re.sub("1[0-9]{3}", "<UDIM>", filePath)
         filePath = usd_utils.safe_relpath(filePath, os.path.dirname(self.GetFilename()))
         texturePrim = UsdShade.Shader.Define(self.GetUsdStage(), self.GetUsdPath().GetParentPath().AppendPath(primName))
         texturePrim.CreateIdAttr("UsdUVTexture")
@@ -119,3 +131,5 @@ class RSPreviewWriter(maxUsd.ShaderWriter):
         return maxUsd.ShaderWriter.ContextSupport.Unsupported
 
 maxUsd.ShaderWriter.Register(RSPreviewWriter, "RS Standard Material")
+maxUsd.ShaderWriter.Register(RSPreviewWriter, "RS Material Output")
+maxUsd.ShaderWriter.Register(RSPreviewWriter, "RS Sprite")
