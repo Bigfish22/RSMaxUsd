@@ -155,7 +155,7 @@ schemaToMax = {'redshift::': rt.MultiOutputChannelTexmapToTexmap,
                  'redshift::TonemapPattern' : rt.rsTonemapPattern}
 
 PropertyRemaps = {rt.rsOSLMap : {'OSLCode':'RS_osl_code', 'oslFilename':'RS_osl_file', 'oslSource':'RS_osl_source'},
-                  rt.rsTexture: {"scale_x" : "scale", "scale_y": "scale", "offset_x" : "offset", "offset_y" : "offset"}}
+                  rt.rsTexture: {"scale_x" : "scale", "scale_y": "scale", "offset_x" : "offset", "offset_y" : "offset", "tex0_filename" : "tex0"}}
                       
 class RSShaderReaderBase():
     def Read(self, prim):
@@ -207,8 +207,11 @@ class RSShaderReaderBase():
         if rt.classOf(maxNode) == rt.rsOSLMap: #set these first if its an osl node, or we will not have any paramters to set :D
             if shader.GetAttribute("inputs:RS_osl_code"):
                 maxNode.OSLCode = shader.GetAttribute("inputs:RS_osl_code").Get()
-            if shader.GetAttribute("inputs:RS_osl_file"):    
-                maxNode.oslFilename = shader.GetAttribute("inputs:RS_osl_file").Get().path
+            if shader.GetAttribute("inputs:RS_osl_file"):
+                try:
+                    maxNode.oslFilename = shader.GetAttribute("inputs:RS_osl_file").Get().path
+                except:
+                    pass #if this isn't correctly difined as a asset type it will fail
             if shader.GetAttribute("inputs:RS_osl_source"):
                 maxNode.oslSource = shader.GetAttribute("inputs:RS_osl_source").Get()
                 

@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+USERELATIVEPATHING = True #TODO: expose as a setting
+
 import maxUsd
 import usd_utils
 import pymxs
@@ -167,7 +169,8 @@ maxShaderToRS = {rt.MultiOutputChannelTexmapToTexmap : ["", 'out'],
                 rt.rsMaterialOutput : ['', '']}
                     
 PropertyRemaps = {rt.rsOSLMap : {'OSLCode':'RS_osl_code', 'oslFilename':'RS_osl_file', 'oslSource':'RS_osl_source'},
-                  rt.rsTexture: {"scale_x" : "scale", "scale_y": "scale", "offset_x" : "offset", "offset_y" : "offset"}}
+                  rt.rsTexture: {"scale_x" : "scale", "scale_y": "scale", "offset_x" : "offset", "offset_y" : "offset", "tex0_colorspace" : "tex0_colorSpace", "tex0_filename" : "tex0"},
+                  rt.rsBitmap : {"tex0_colorspace" : "tex0_colorSpace", "tex0_filename" : "tex0"}}
 
 
 
@@ -177,6 +180,13 @@ class RSShaderWriter(maxUsd.ShaderWriter):
             self.nodeTranslators = {rt.CompositeMap: self.NodeTranslateComposite,
                                     rt.Gradient_Ramp : self.NodeTranslateGradientRamp,
                                     rt.VertexColor : self.NodeTranslateVertexColor}
+                                        
+            #if its targetting a different file we need this for relative pathing
+            stage = self.GetUsdStage()
+            targetLayer = stage.GetEditTarget().GetLayer()
+            self.outputFile = self.GetFilename()
+            if not targetLayer.anonymous:
+                self.outputFile = targetLayer.identifier
             
             material = rt.GetAnimByHandle(self.GetMaterial())
             isMultiTarget = len(self.GetExportArgs().GetAllMaterialConversions()) > 1
@@ -287,27 +297,25 @@ class RSShaderWriter(maxUsd.ShaderWriter):
         return value
             
     def ResolveString(self, prim, value, prop, node):
-        #is it a filepath? if so we need to store it as an asset. Relative file paths don't seem to resolve, need to work out how works.
         nodeClass = rt.classOf(node)
+        if str(prop) in PropertyRemaps[nodeClass]:
+                propertyName = PropertyRemaps[nodeClass][str(prop)]
+        else:
+            propertyName = str(prop)
+            
         if re.search("\....$", value):
             assetPath = self.RelativeAssetPath(value)
-            propertyName = str(prop)
-            if propertyName == "tex0_filename":
-                propertyName = "tex0"
+            if propertyName == "tex0":
                 try:  #sprites dont have tiling mode, classic stitch up there
                     if getattr(node, "tilingmode") == 1:
                         assetPath = re.sub("1[0-9]{3}", "<UDIM>", assetPath)
                 except:
                     pass
-            if rt.ClassOf(node) in PropertyRemaps:
-                if str(prop) in PropertyRemaps[nodeClass]:
-                    propertyName = PropertyRemaps[nodeClass][str(prop)]
-                    prim.CreateInput(propertyName, Sdf.ValueTypeNames.Asset).Set(assetPath)
-
-                    return
+                prim.CreateInput(propertyName, Sdf.ValueTypeNames.Asset).Set(assetPath)
+                return
             prim.CreateInput(propertyName, Sdf.ValueTypeNames.Asset).Set(assetPath)
         else:
-            prim.CreateInput(str(prop), Sdf.ValueTypeNames.String).Set(value)
+            prim.CreateInput(propertyName, Sdf.ValueTypeNames.String).Set(value)
 
     
     def ResolveUVGen(self, prim, value):
@@ -387,8 +395,11 @@ class RSShaderWriter(maxUsd.ShaderWriter):
                 self.AddShader(usdShader, maxShader, shaderProperty)
         
     def RelativeAssetPath(self, path):
-        relPath = rt.pathConfig.convertPathToAbsolute(path)
-        relPath = usd_utils.safe_relpath(relPath, os.path.dirname(self.GetFilename()))
+        if USERELATIVEPATHING:
+            relPath = rt.pathConfig.convertPathToAbsolute(path)
+            relPath = usd_utils.safe_relpath(relPath, os.path.dirname(self.outputFile))
+        else:
+            relPath = path
         return relPath.replace(os.sep, "/")
     
     def CleanMapProperty(self, prop):
