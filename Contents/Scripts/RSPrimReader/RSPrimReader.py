@@ -100,8 +100,9 @@ class RSLightReader(maxUsd.PrimReader):
             
     @classmethod
     def CanImport(cls, args, prim):
-        #TODO: Need to check if we are in a redshift import context.
-        return maxUsd.PrimReader.ContextSupport.Supported
+        if 'RSImportChaser' in args.GetChaserNames():
+            return maxUsd.PrimReader.ContextSupport.Supported
+        return maxUsd.PrimReader.ContextSupport.Unsupported
  
  
 class RSDomeReader(maxUsd.PrimReader):
@@ -132,8 +133,9 @@ class RSDomeReader(maxUsd.PrimReader):
             
     @classmethod
     def CanImport(cls, args, prim):
-        #TODO: Need to check if we are in a redshift import context.
-        return maxUsd.PrimReader.ContextSupport.Supported
+        if 'RSImportChaser' in args.GetChaserNames():
+            return maxUsd.PrimReader.ContextSupport.Supported
+        return maxUsd.PrimReader.ContextSupport.Unsupported
    
    
 class RSSunSkyReader(maxUsd.PrimReader):
@@ -172,7 +174,9 @@ class RSSunSkyReader(maxUsd.PrimReader):
             
     @classmethod
     def CanImport(cls, args, prim):
-        return maxUsd.PrimReader.ContextSupport.Supported
+        if 'RSImportChaser' in args.GetChaserNames():
+            return maxUsd.PrimReader.ContextSupport.Supported
+        return maxUsd.PrimReader.ContextSupport.Unsupported
 
 class RSProxyPrimReader(maxUsd.PrimReader):
     '''
@@ -216,7 +220,9 @@ class RSProxyPrimReader(maxUsd.PrimReader):
 class RSVolumeReader(maxUsd.PrimReader):
     @classmethod
     def CanImport(cls, args, prim):
-        return maxUsd.PrimReader.ContextSupport.Supported
+        if 'RSImportChaser' in args.GetChaserNames():
+            return maxUsd.PrimReader.ContextSupport.Supported
+        return maxUsd.PrimReader.ContextSupport.Unsupported
         
     def Read(self):
         try:
@@ -238,6 +244,7 @@ class RSVolumeReader(maxUsd.PrimReader):
             try:
                 material = UsdShade.MaterialBindingAPI(usdPrim).ComputeBoundMaterial()
                 if material[0]:
+                    materialName = material[0].GetPrim().GetName()
                     redshift_usd_mat = material[0].GetSurfaceOutput("Redshift").GetConnectedSources()[0][0].source.GetPrim()
                     if redshift_usd_mat.GetTypeName() == "NodeGraph":
                         usdAttribute = redshift_usd_mat.GetAttribute("outputs:shader")
@@ -247,6 +254,7 @@ class RSVolumeReader(maxUsd.PrimReader):
                     materialHandle = reader.Read(redshift_usd_mat)
                     
                     node.material = rt.getAnimByHandle(materialHandle)
+                    node.material.name = materialName
             except:
                 print("Failed to import volume shader")
             
