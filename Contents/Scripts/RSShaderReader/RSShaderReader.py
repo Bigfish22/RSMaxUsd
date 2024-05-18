@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import maxUsd
+import pymxs
 from pymxs import runtime as rt
 from pxr import UsdShade, Sdf, Ar
 import usd_utils
@@ -158,9 +159,21 @@ PropertyRemaps = {rt.rsOSLMap : {'OSLCode':'RS_osl_code', 'oslFilename':'RS_osl_
                   rt.rsTexture: {"scale_x" : "scale", "scale_y": "scale", "offset_x" : "offset", "offset_y" : "offset", "tex0_filename" : "tex0"}}
                       
 class RSShaderReaderBase():
-    def Read(self, prim):
+    def Read(self, prim, args = None):
         try:
             self.MapLibrary = {}
+            
+            #TimeConfig
+            self.animated = False
+            if args != None:
+                importSettings = args
+                timeMode = importSettings.GetTimeMode()
+                if timeMode == maxUsd.ImportTimeMode.CustomRange:
+                    self.animStart = importSettings.GetStartTimeCode()
+                    self.animEnd = importSettings.GetEndTimeCode()
+                    if self.animStart != self.animEnd:
+                        self.animated = True
+                        
             
             maxNode = rt.rsMaterialOutput()
             handle = rt.GetHandleByAnim(maxNode)
@@ -186,12 +199,25 @@ class RSShaderReaderBase():
         shaderID = shader.GetAttribute("info:id").Get()
         shaderName = shader.GetName()
         
+        MapPropertyName = propertyName
+        if not propertyName.endswith("_input"):
+            MapPropertyName = propertyName + "_map"
+
         if not (shaderID in schemaToMax):
                 print(shaderID, "is not supported by this reader!")
                 return (None, None)
                 
         if shader in self.MapLibrary:
             maxNode = rt.getAnimByHandle(self.MapLibrary[shader])
+            if hasattr(maxNode, "numIMultipleOutputChannels"):
+                MultiOutput = rt.MultiOutputChannelTexmapToTexmap()
+                MultiOutput.sourcemap = maxNode
+                outPutName = connection[0].pathString.split(":")[1]  #path should have something that does this, but maybe not in python?
+                for index in range(1, (maxNode.numIMultipleOutputChannels + 1)):
+                    if maxNode.getIMultipleOutputChannelName(index) == outPutName:
+                        MultiOutput.outputChannelIndex = index
+                maxNode = MultiOutput
+            return (MapPropertyName, maxNode) # We should be able to return here, this skips setting properties if the map already existed
         else:
             maxNode = schemaToMax[shaderID]()
             maxNode.name = shaderName
@@ -199,11 +225,7 @@ class RSShaderReaderBase():
         map = True
         if rt.superclassof(maxNode) == rt.material:
             map = False
-            
-        MapPropertyName = propertyName
-        if not propertyName.endswith("_input"):
-            MapPropertyName = propertyName + "_map"
-        
+
         if rt.classOf(maxNode) == rt.rsOSLMap: #set these first if its an osl node, or we will not have any paramters to set :D
             if shader.GetAttribute("inputs:RS_osl_code"):
                 maxNode.OSLCode = shader.GetAttribute("inputs:RS_osl_code").Get()
@@ -211,7 +233,7 @@ class RSShaderReaderBase():
                 try:
                     maxNode.oslFilename = shader.GetAttribute("inputs:RS_osl_file").Get().path
                 except:
-                    pass #if this isn't correctly difined as a asset type it will fail
+                    pass #if this isn't correctly defined as a asset type it will fail
             if shader.GetAttribute("inputs:RS_osl_source"):
                 maxNode.oslSource = shader.GetAttribute("inputs:RS_osl_source").Get()
                 
@@ -232,29 +254,37 @@ class RSShaderReaderBase():
         shaderPrim = UsdShade.Shader(shader)
         for input in shaderPrim.GetInputs():
             connections = input.GetAttr().GetConnections()
-            ChildpropertyName = input.GetBaseName()
-            if hasattr(maxNode, ChildpropertyName) or hasattr(maxNode, ChildpropertyName + "_map"):
+            childpropertyName = input.GetBaseName()
+            if childpropertyName == 'tex0':
+                childpropertyName = 'tex0_filename'
+            if hasattr(maxNode, childpropertyName) or hasattr(maxNode, childpropertyName + "_map"):
                 if len(connections) > 0:
-                    ChildMapPropertyName, Map = self.AddNode(prim, ChildpropertyName, connections)
-                    if ChildMapPropertyName:
+                    childMapPropertyName, Map = self.AddNode(prim, childpropertyName, connections)
+                    if childMapPropertyName:
                         if map:
-                            rt.USDImporter.SetTexmapParamByName(maxNode, ChildMapPropertyName, Map)
+                            rt.USDImporter.SetTexmapParamByName(maxNode, childMapPropertyName, Map)
                         else:
-                            rt.USDImporter.SetMaterialParamByName(maxNode, ChildMapPropertyName, Map)
+                            rt.USDImporter.SetMaterialParamByName(maxNode, childMapPropertyName, Map)
                         continue
-                    
-                value = self.ResolveMaxValue(input.GetAttr())
-                if value != None:
-                    if ChildpropertyName == "tex0":  #SCREAMING
-                        ChildpropertyName = "tex0_filename"
-                    if getattr(maxNode, ChildpropertyName) != None:
-                        try:
-                            if map:
-                                rt.USDImporter.SetTexmapParamByName(maxNode, ChildpropertyName, value)
-                            else:
-                                rt.USDImporter.SetMaterialParamByName(maxNode, ChildpropertyName, value)
-                        except:
-                            print("Invalid property:", ChildpropertyName, "with", value)
+                
+                attr = input.GetAttr()
+                value = self.ResolveMaxValue(attr, 0)
+                if value == None or getattr(maxNode, childpropertyName) == None:
+                    continue #skip doing all the slow stuff
+                varying = False
+                if self.animated:
+                    varying = attr.ValueMightBeTimeVarying()
+                animateValue = self.animated and varying
+                with pymxs.animate(animateValue):
+                    for frame in range(int(self.animStart), int(self.animEnd) + 1):
+                        with pymxs.attime(frame):
+                            value = self.ResolveMaxValue(attr, frame)
+                            try:
+                                rt.setProperty(maxNode, childpropertyName, value)
+                            except:
+                                print("potentially invalid value for: ", childpropertyName, "with value: ", value)
+                            if not animateValue:
+                                break
                                 
                                 
         self.MapLibrary[shader] = rt.getHandleByAnim(maxNode)
@@ -270,20 +300,23 @@ class RSShaderReaderBase():
             maxNode = MultiOutput
         
         return (MapPropertyName, maxNode)
-        
-    def ResolveMaxValue(self, usdAttr):
+    
+    
+    def ResolveMaxValue(self, usdAttr, frame):
         sdfType = usdAttr.GetTypeName()
         if sdfType not in maxTypeToSdf:
             return None
-        sdfValue = usdAttr.Get()
+        sdfValue = usdAttr.Get(frame)
         if sdfValue == None:
             return None
             
         maxValue = sdfValue
-        if sdfType == Sdf.ValueTypeNames.Color3f or sdfType == Sdf.ValueTypeNames.Float3:
-            maxValue = rt.point4(sdfValue[0], sdfValue[1], sdfValue[2], 1)
+        if sdfType == Sdf.ValueTypeNames.Color3f:
+            maxValue = rt.color(sdfValue[0]*255, sdfValue[1]*255, sdfValue[2]*255, 255)
         elif sdfType == Sdf.ValueTypeNames.Color4f:
             maxValue = rt.point4(sdfValue[0], sdfValue[1], sdfValue[2], sdfValue[3])
+        elif sdfType == Sdf.ValueTypeNames.Float3:
+            maxValue = rt.point3(sdfValue[0], sdfValue[1], sdfValue[2])
         elif sdfType == Sdf.ValueTypeNames.Asset:
             maxValue = sdfValue.path
             if "<UDIM>" in maxValue:
@@ -307,7 +340,11 @@ class RSShaderReader(maxUsd.ShaderReader):
     def Read(self):
         reader = RSShaderReaderBase()
         prim = self.GetUsdPrim() #Turn this into a max material
-        handle = reader.Read(prim)
+        args = self.GetArgs()
+        
+        handle = reader.Read(prim, args)
+        
+        
         
         self.RegisterCreatedMaterial(prim.GetPrimPath(), handle) #Register here and hopefully max will assign the material we made?
         return True
