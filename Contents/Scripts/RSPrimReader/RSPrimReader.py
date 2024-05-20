@@ -251,11 +251,13 @@ class RSVolumeReader(maxUsd.PrimReader):
                         Connections = usdAttribute.GetConnections()
                         redshift_usd_mat = redshift_usd_mat.GetPrimAtPath(Connections[0].GetPrimPath())
                     reader = RSShaderReader.RSShaderReaderBase()
-                    materialHandle = reader.Read(redshift_usd_mat)
+                    materialHandle = reader.Read(redshift_usd_mat, self.GetArgs())
                     
                     node.material = rt.getAnimByHandle(materialHandle)
                     node.material.name = materialName
-            except:
+            except Exception as e:
+                print('Read - Error: %s' % str(e))
+                print(traceback.format_exc())
                 print("Failed to import volume shader")
             
             
