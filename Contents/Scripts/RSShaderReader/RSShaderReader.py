@@ -165,6 +165,8 @@ class RSShaderReaderBase():
             
             #TimeConfig
             self.animated = False
+            self.animStart = 0
+            self.animEnd = 0
             if args != None:
                 importSettings = args
                 timeMode = importSettings.GetTimeMode()
