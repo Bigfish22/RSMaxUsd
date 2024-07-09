@@ -25,7 +25,6 @@ into:
 * materials, lights, Volumes and proxies exported will render within the redshift hydra delegate in solaris.
 
 ## Limitations
-* MATERIAL NODES WITH IDENTICAL NAMES IN A SINGLE GRAPH CAN CAUSE HOUDINI TO HANG!
 * only supports rs nodes + (max composite, max vertex color and gradient ramp)
 * some nodes will not appear in hydra due to extreme differences between the max and houdini versions. (rs state being an example)
 * rs bitmap is converted to rs texture
