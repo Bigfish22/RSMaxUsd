@@ -15,6 +15,7 @@
 def RSShaderImporterContext():
     extraArgs = {}
     extraArgs['chaser']  = ['RSImportChaser']
+    extraArgs['chaserNames']  = ['RSImportChaser']
     extraArgs['convertMaterialsTo']  = ['redshift_usd_material']
     return extraArgs
 

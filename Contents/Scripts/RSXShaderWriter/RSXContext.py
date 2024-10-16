@@ -15,17 +15,20 @@
 def RSShaderWriterContext():
     extraArgs = {}
     extraArgs['chaser']  = ['RSObjectProperties']
+    extraArgs['chaserNames']  = ['RSObjectProperties']
     extraArgs['convertMaterialsTo']  = ['redshift_usd_material']
     return extraArgs
 
 def RSRenderSettingsContext():
     extraArgs = {}
     extraArgs['chaser']  = ['RSRenderSettingsChaser']
+    extraArgs['chaserNames']  = ['RSRenderSettingsChaser']
     return extraArgs
     
 def RSmtlxWriterContext():
     extraArgs = {}
-    extraArgs['chaser']  = ['RSObjectProperties']
+    extraArgs['chaser'] = ['RSObjectProperties']
+    extraArgs['chaserNames'] = ['RSObjectProperties']
     extraArgs['convertMaterialsTo']  = ['mtlxstandard_surface']
     return extraArgs
 
