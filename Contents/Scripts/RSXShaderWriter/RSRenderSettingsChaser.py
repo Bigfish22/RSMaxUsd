@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import maxUsd
+import os
 from pxr import Usd, Sdf, UsdRender, UsdGeom, Gf
 from pymxs import runtime as rt
 import traceback
@@ -30,6 +31,7 @@ aovSourceMap = {}
 class RSRenderSettingsChaser(maxUsd.ExportChaser):
     def __init__(self, factoryContext, *args, **kwargs):
         super(RSRenderSettingsChaser, self).__init__(factoryContext, *args, **kwargs)
+        self.primsToNodeHandles = factoryContext.GetPrimsToNodeHandles()
         self.stage = factoryContext.GetStage()
 
     def PostExport(self):
@@ -48,6 +50,17 @@ class RSRenderSettingsChaser(maxUsd.ExportChaser):
             renderSettingsPrim = self.stage.GetPrimAtPath("/Render/Redshift1")  #I thought inheritance was supposed to make it so I don't have to do chaotic stuff...
             props = rt.getPropNames(rt.renderers.current)
 
+            #Get The camera for rendering
+            cam = rt.viewport.GetCamera()
+            if cam:
+                nodeHandle = cam.handle
+                CameraPrimPath = list(self.primsToNodeHandles.keys())[list(self.primsToNodeHandles.values()).index(nodeHandle)]
+                camRel = renderSettingsPrim.CreateRelationship("camera")
+                camRel.SetTargets([CameraPrimPath])
+
+            #Redshift needs this to save a file
+            renderSettingsPrim.CreateAttribute("redshift:global:RS_outputEnable", Sdf.ValueTypeNames.Bool).Set(True)
+
             for prop in props:
                 try:
                     #TODO: Remap any render settings where the names do not match max.
@@ -62,10 +75,10 @@ class RSRenderSettingsChaser(maxUsd.ExportChaser):
                 except:
                     pass
 
-            #Render Product (the actual target to disk
+            #Render Product (the actual target to disk)
             renderProduct = UsdRender.Product.Define(self.stage, "/Render/Products/MultiLayer")
             renderProduct.CreateResolutionAttr().Set(Gf.Vec2i(rt.renderWidth, rt.renderHeight))
-            self.generateFilePaths(renderProduct)
+            self.generateFilePaths(renderSettingsPrim, renderProduct)
             renderSettings.CreateProductsRel().AddTarget("/Render/Products/MultiLayer")
             
             #Beauty pass setup
@@ -101,20 +114,26 @@ class RSRenderSettingsChaser(maxUsd.ExportChaser):
         
         return True
         
-    def generateFilePaths(self, renderProduct):
+    def generateFilePaths(self, renderSettings, renderProduct):
         productName = renderProduct.CreateProductNameAttr()
+        rsFilePathAttribute = renderSettings.CreateAttribute("redshift:global:RS_outputFileName", Sdf.ValueTypeNames.String)
         if rt.rendTimeType == 1:
             productName.Set(rt.rendOutputFilename)
+            rsFilePathAttribute.Set(rt.rendOutputFilename)
             return
         elif rt.rendTimeType == 2:
             for i in range(int(rt.animationRange.start.frame), int(rt.animationRange.end.frame) + 1):
                 pathSplit = os.path.splitext(rt.rendOutputFilename)
-                productName.Set(f"{pathSplit[0]}_{i:0>{4}}{pathSplit[1]}", i)
+                finalPath = f"{pathSplit[0]}_{i:0>{4}}{pathSplit[1]}",
+                productName.Set(finalPath, i)
+                rsFilePathAttribute.Set(finalPath, i)
             return
         elif rt.rendTimeType == 3:
             for i in range(int(rt.rendStart.frame), int(rt.rendEnd.frame) + 1):
                 pathSplit = os.path.splitext(rt.rendOutputFilename)
-                productName.Set(f"{pathSplit[0]}_{i:0>{4}}{pathSplit[1]}", i)
+                finalPath = f"{pathSplit[0]}_{i:0>{4}}{pathSplit[1]}"
+                productName.Set(finalPath, i)
+                rsFilePathAttribute.Set(finalPath, i)
             return
         return
             
