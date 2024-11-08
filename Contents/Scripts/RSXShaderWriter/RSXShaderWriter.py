@@ -99,6 +99,7 @@ maxShaderToRS = {rt.MultiOutputChannelTexmapToTexmap : ["", 'out'],
                 rt.rsMathNeg : ['RSMathNeg', 'out'],
                 rt.rsMathNormalizeVector : ['RSMathNormalizeVector', 'out'],
                 rt.rsOSLMap : ['rsOSL', ''],
+                rt.rsOSLMaterial : ['rsOSL', ''],
                 rt.rsPavement : ['RSPavement', ''],
                 rt.rsPhysicalSky : ['RSPhysicalSky', 'outColor'],
                 rt.rsMathPow : ['RSMathPow', 'out'],
@@ -169,7 +170,9 @@ maxShaderToRS = {rt.MultiOutputChannelTexmapToTexmap : ["", 'out'],
                 rt.rsMaterialOutput : ['', '']}
                     
 PropertyRemaps = {rt.rsOSLMap : {'OSLCode':'RS_osl_code', 'oslFilename':'RS_osl_file', 'oslSource':'RS_osl_source'},
+                  rt.rsOSLMaterial : {'OSLCode':'RS_osl_code', 'oslFilename':'RS_osl_file', 'oslSource':'RS_osl_source'},
                   rt.rsTexture: {"scale_x" : "scale", "scale_y": "scale", "offset_x" : "offset", "offset_y" : "offset", "tex0_colorspace" : "tex0_colorSpace", "tex0_filename" : "tex0"},
+                  rt.rsSprite : {"tex0_filename" : "tex0", "repeats_x" : "repeats", "repeats_y" : "repeats"},
                   rt.rsBitmap : {"tex0_colorspace" : "tex0_colorSpace", "tex0_filename" : "tex0"}}
 
 
@@ -218,6 +221,8 @@ class RSShaderWriter(maxUsd.ShaderWriter):
             
             if rt.classOf(material) == rt.rsVolume or rt.classOf(material) == rt.rsStandardVolume:
                 surfaceShader.CreateInput('Volume', Sdf.ValueTypeNames.Token).ConnectToSource(nodeShader.ConnectableAPI(), "outColor")
+            elif rt.classOf(material) == rt.rsOslMaterial:
+                surfaceShader.CreateInput('Surface', Sdf.ValueTypeNames.Token).ConnectToSource(nodeShader.ConnectableAPI(), material.oslClosureOutput)
             elif rt.classOf(material) != rt.rsMaterialOutput:
                 surfaceShader.CreateInput('Surface', Sdf.ValueTypeNames.Token).ConnectToSource(nodeShader.ConnectableAPI(), "outColor")
             
@@ -244,7 +249,7 @@ class RSShaderWriter(maxUsd.ShaderWriter):
         animated = False
         if rt.getPropertyController(node, str(prop)):
             animated = True
-        if not (nodeClass == rt.rsOSLMap):
+        if not ((nodeClass == rt.rsOSLMap) or (nodeClass == rt.rsOSLMaterial)):
             if value == getattr(template, str(prop)) and not animated:
                 return #The property is still at its defualt value and it is not animated, so we can just skip doing anything with it
             
@@ -291,15 +296,18 @@ class RSShaderWriter(maxUsd.ShaderWriter):
             value = None
         elif type == rt.BitMap:
             value = None
-        elif rt.classof(node) == rt.rsTexture and str(prop).endswith(('_x', '_y')):
+        elif (rt.classof(node) == rt.rsTexture or rt.rsSprite) and str(prop).endswith(('_x', '_y')):
             value = Gf.Vec2f(getattr(node, str(prop)[:-2] + '_x'), getattr(node, str(prop)[:-2] + '_y'))
             self.type = rt.point2
         return value
             
     def ResolveString(self, prim, value, prop, node):
         nodeClass = rt.classOf(node)
-        if str(prop) in PropertyRemaps[nodeClass]:
-                propertyName = PropertyRemaps[nodeClass][str(prop)]
+        if nodeClass in PropertyRemaps:
+            if str(prop) in PropertyRemaps[nodeClass]:
+                    propertyName = PropertyRemaps[nodeClass][str(prop)]
+            else:
+                propertyName = str(prop)
         else:
             propertyName = str(prop)
             
@@ -359,6 +367,8 @@ class RSShaderWriter(maxUsd.ShaderWriter):
             maxClass = rt.classOf(maxShader)
         elif maxClass == rt.rsOSLMap:  #catch for osl maps with a single output, multi output ones will be caught above ^
             outPutName = maxShader.getIMultipleOutputChannelName(1)
+        elif maxClass == rt.rsOSLMaterial:  #catch for osl maps with a single output, multi output ones will be caught above ^
+            outPutName = maxShader.oslClosureOutput
         
         
         primName = maxShader.name.replace(" ", "_").replace("#", "_")
@@ -564,3 +574,4 @@ maxUsd.ShaderWriter.Register(RSShaderWriter, "RS Store Color To AOV")
 maxUsd.ShaderWriter.Register(RSShaderWriter, "RS Standard Volume")
 maxUsd.ShaderWriter.Register(RSShaderWriter, "RS Toon Material")
 maxUsd.ShaderWriter.Register(RSShaderWriter, "RS Material Output")
+maxUsd.ShaderWriter.Register(RSShaderWriter, "RS OSL Material")
