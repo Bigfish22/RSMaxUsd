@@ -106,6 +106,28 @@ class RSRenderSettingsChaser(maxUsd.ExportChaser):
                 print(rt.classOf(rendElement))
                 orderedVarsRel.AddTarget(aovPath)
 
+            #Volume scattering
+            atmosCount = rt.numAtmospherics
+            for i in range(atmosCount):
+                atmos = rt.getAtmospheric(i+1)
+                if rt.classOf(atmos) == rt.rsVolumeScattering:
+                    renderSettingsPrim.CreateAttribute("redshift:global:VolLightingEnabled", Sdf.ValueTypeNames.Bool).Set(True)
+                    renderSettingsPrim.CreateAttribute("redshift:global:VolLightingScatteringCoefficient", Sdf.ValueTypeNames.Float).Set(atmos.scatteringAmount)
+                    renderSettingsPrim.CreateAttribute("redshift:global:VolLightingExtinctionCoefficient", Sdf.ValueTypeNames.Float).Set(atmos.attenuationAmount)
+                    renderSettingsPrim.CreateAttribute("redshift:global:VolLightingApplyExposureCompensation", Sdf.ValueTypeNames.Bool).Set(atmos.cameraRayContributionScale) 
+                    renderSettingsPrim.CreateAttribute("redshift:global:VolLightingFogAmbient", Sdf.ValueTypeNames.Float3).Set((atmos.fogEmission.r/255, atmos.fogEmission.g/255, atmos.fogEmission.b/255))
+                    renderSettingsPrim.CreateAttribute("redshift:global:VolLightingFogHeight", Sdf.ValueTypeNames.Float).Set(atmos.fogHeight)
+                    renderSettingsPrim.CreateAttribute("redshift:global:VolLightingFogHorizonBlur", Sdf.ValueTypeNames.Float).Set(atmos.fogHorizonBlur)
+                    renderSettingsPrim.CreateAttribute("redshift:global:VolLightingFogNormal", Sdf.ValueTypeNames.Float3).Set(Gf.Vec3f(atmos.fogGroundNormalX, atmos.fogGroundNormalZ, atmos.fogGroundNormalY))
+                    renderSettingsPrim.CreateAttribute("redshift:global:VolLightingFogOrigin", Sdf.ValueTypeNames.Float3).Set(Gf.Vec3f(atmos.fogGroundPointX, atmos.fogGroundPointY, atmos.fogGroundPointZ))
+                    renderSettingsPrim.CreateAttribute("redshift:global:VolLightingPhase", Sdf.ValueTypeNames.Float).Set(atmos.phase)
+                    renderSettingsPrim.CreateAttribute("redshift:global:VolLightingRayContributionCamera", Sdf.ValueTypeNames.Float).Set(atmos.cameraRayContributionScale)
+                    renderSettingsPrim.CreateAttribute("redshift:global:VolLightingRayContributionEnvironment", Sdf.ValueTypeNames.Float).Set(atmos.environmentRayContributionScale)
+                    renderSettingsPrim.CreateAttribute("redshift:global:VolLightingRayContributionGI", Sdf.ValueTypeNames.Float).Set(atmos.GIRayContributionScale)
+                    renderSettingsPrim.CreateAttribute("redshift:global:VolLightingRayContributionReflection", Sdf.ValueTypeNames.Float).Set(atmos.reflectionRayContributionScale)
+                    renderSettingsPrim.CreateAttribute("redshift:global:VolLightingReplaceAlphaOnEnvironment",   Sdf.ValueTypeNames.Bool).Set(atmos.environmentAlphaReplace)
+                    renderSettingsPrim.CreateAttribute("redshift:global:VolLightingTint", Sdf.ValueTypeNames.Float3).Set((atmos.tint.r/255, atmos.tint.g/255, atmos.tint.b/255))
+                    #renderSettingsPrim.CreateAttribute("redshift:global:VolLightingTintShader"
             
         except Exception as e:
             print('Write - Error: %s' % str(e))
