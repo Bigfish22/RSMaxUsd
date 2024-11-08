@@ -22,7 +22,7 @@ import usd_utils
 import traceback
 import os
                                                                             #mesh lights are gonna be weird
-LightClasses = ["RectLight", "DiskLight", "SphereLight", "CylinderLight", "Xform", "DomeLightNoXform"]
+LightClasses = ["RectLight", "DiskLight", "SphereLight", "CylinderLight", "Xform", "DomeLightNoXform", "DistantLight"]
 
 class RSLightWriter(maxUsd.PrimWriter):
     def GetPrimType(self):
@@ -129,7 +129,10 @@ class RSLightWriter(maxUsd.PrimWriter):
     def CanExport(cls, nodeHandle, exportArgs):
         node = rt.maxOps.getNodeByHandle(nodeHandle)
         if rt.classOf(node) == rt.rsPhysicalLight:
-            cls.lightType = node.areashape
+            if node.type == 0:
+                cls.lightType = node.areashape
+            elif node.type == 3:
+                cls.lightType = 6
             return maxUsd.PrimWriter.ContextSupport.Supported
         if rt.classOf(node) == rt.rsDomeLight:
             cls.lightType = 5
