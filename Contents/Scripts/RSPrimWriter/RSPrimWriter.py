@@ -67,14 +67,15 @@ class RSLightWriter(maxUsd.PrimWriter):
                     WriteProperty(lightPrim.CreateHeightAttr(),node, "length", usdTime)
                 elif prim.GetTypeName() == "DiskLight":
                     lightPrim = UsdLux.DiskLight(prim)
-                    WriteProperty(lightPrim.CreateRadiusAttr(), node, "width", usdTime)
+                    WriteProperty(lightPrim.CreateRadiusAttr(), node, "width", usdTime, 0.5)
+
                 elif prim.GetTypeName() == "SphereLight":
                     lightPrim = UsdLux.SphereLight(prim)
-                    WriteProperty(lightPrim.CreateRadiusAttr(), node, "width", usdTime)
+                    WriteProperty(lightPrim.CreateRadiusAttr(), node, "width", usdTime, 0.5)
                 elif prim.GetTypeName() == "CylinderLight":
                     lightPrim = UsdLux.CylinderLight(prim)
-                    WriteProperty(lightPrim.CreateRadiusAttr(), node, "width", usdTime)
-                    WriteProperty(lightPrim.CreateLengthAttr(), node, "length", usdTime)
+                    WriteProperty(lightPrim.CreateRadiusAttr(), node, "width", usdTime, 0.5)
+                    WriteProperty(lightPrim.CreateLengthAttr(), node, "length", usdTime, 0.5)
                     lightPrim.AddRotateZOp().Set(90)
                 elif prim.GetTypeName() == "Xform":
                     print("Mesh Light Not Supported Yet")
@@ -261,11 +262,11 @@ class RSVolumeWriter(maxUsd.PrimWriter):
         return maxUsd.PrimWriter.ContextSupport.Unsupported
 
 
-def WriteProperty(usdAttribute, maxNode, maxProperty, usdTime):
+def WriteProperty(usdAttribute, maxNode, maxProperty, usdTime, scale = 1.0):
     if rt.getPropertyController(maxNode, maxProperty):
-        usdAttribute.Set(getattr(maxNode, maxProperty), usdTime)
+        usdAttribute.Set(getattr(maxNode, maxProperty) * scale, usdTime)
     else:
-        usdAttribute.Set(getattr(maxNode, maxProperty))
+        usdAttribute.Set(getattr(maxNode, maxProperty) * scale)
         
 def WritePropertyColor(usdAttribute, maxNode, maxProperty, usdTime):
     if rt.getPropertyController(maxNode, maxProperty):
