@@ -84,7 +84,8 @@ class RSPreviewWriter(maxUsd.ShaderWriter):
                     nodeShader.CreateInput(usdProp, Sdf.ValueTypeNames.Token).ConnectToSource(mapPrim.ConnectableAPI(), data["channel"])
                 elif rt.classOf(map) == rt.rsBumpMap:
                     mapPrim = self.AddTexture(nodeShader, "Input_map", map)
-                    nodeShader.CreateInput(usdProp, Sdf.ValueTypeNames.Token).ConnectToSource(mapPrim.ConnectableAPI(), data["channel"])
+                    if mapPrim != None:
+                        nodeShader.CreateInput(usdProp, Sdf.ValueTypeNames.Token).ConnectToSource(mapPrim.ConnectableAPI(), data["channel"])
             
             self.SetUsdPrim(nodeShader.GetPrim())
             return True
@@ -94,7 +95,9 @@ class RSPreviewWriter(maxUsd.ShaderWriter):
             print(traceback.format_exc())
             
     def AddTexture(self, prim, property, parentNode):
-        node = getattr(parentNode, property)
+        node = rt.getProperty(parentNode, property)
+        if rt.classOf(node) not in ((rt.rsBitmap, rt.rsTexture)):
+            return
         primName = node.name.replace(" ", "_").replace("#", "_")
         filePath = node.tex0_filename
         if node.tilingmode == 1:
