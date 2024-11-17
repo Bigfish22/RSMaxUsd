@@ -26,7 +26,48 @@ maxTypeToSdf = {rt.Double : Sdf.ValueTypeNames.Float,
                 rt.name : Sdf.ValueTypeNames.String,
                 rt.point3 : Sdf.ValueTypeNames.Color3f}
                     
-aovSourceMap = {}
+aovSourceMap = {"rsAmbientOcclusionRenderElement" : {"sourceName" : "rs:ao"},
+                "RsBackground" : {"sourceName" : "rs:background"},
+                "RsBeauty" : {"sourceName" : "rs:beauty"},
+                "RsBumpNormals" : {"sourceName" : "rs:bnormals"},
+                "RsCaustics" : {"sourceName" : "rs:caustics"},
+                "RsCausticsRaw" : {"sourceName" : "rs:caustics_raw"},
+                "RsCryptomatte" : {"sourceName" : "rs:cryptomatte"},
+                "RsCustom" : {"sourceName" : "rs:custom"},
+                "RsDepth" : {"sourceName" : "rs:depth"},
+                "RsDiffuseFilter" : {"sourceName" : "rs:diffuse_filter"},
+                "RsDiffuseLighting" : {"sourceName" : "rs:diffuse"},
+                "RsDiffuseLightingRaw" : {"sourceName" : "rs:diffuse_raw"},
+                "RsEmission" : {"sourceName" : "rs:emission"},
+                "RsGlobalIllumination" : {"sourceName" : "rs:gi"},
+                "RsGlobalIlluminationRaw" : {"sourceName" : "rs:gi_raw"},
+                "RsMatte" : {"sourceName" : "rs:matte"},
+                "RsMotionVectors" : {"sourceName" : "rs:motionvectors"},
+                "RsNormals" : {"sourceName" : "rs:normals"},
+                "RsObjectID" : {"sourceName" : "rs:objectid"},
+                "RsObjectSpaceBumpNormals" : {"sourceName" : "rs:object_bump_normal"},
+                "RsObjectSpacePositions" : {"sourceName" : "rs:object_position"},
+                "RsPuzzleMatte" : {"sourceName" : "rs:puzzle"},
+                "RsReflections" : {"sourceName" : "rs:reflections"},
+                "RsReflectionsFilter" : {"sourceName" : "rs:reflections_filter"},
+                "RsReflectionsRaw" : {"sourceName" : "rs:reflections_raw"},
+                "RsRefractions" : {"sourceName" : "rs:refractions"},
+                "RsRefractionsFilter" : {"sourceName" : "rs:refractions_filter"},
+                "RsRefractionsRaw" : {"sourceName" : "rs:refractions_raw"},
+                "RsShadows" : {"sourceName" : "rs:shadows"},
+                "RsSpecularLighting" : {"sourceName" : "rs:specular"},
+                "rsSubSurfaceScatterRenderElement" : {"sourceName" : "rs:sss"},
+                "RsSubSurfaceScatterRaw" : {"sourceName" : "rs:sss_raw"},
+                "RsTotalDiffuseLightingRaw" : {"sourceName" : "rs:total_diffuse_raw"},
+                "RsTotalTranslucencyLightingRaw" : {"sourceName" : "rs:total_translucency_raw"},
+                "RsTranslucencyFilter" : {"sourceName" : "rs:translucency_filter"},
+                "RsTranslucencyGIRaw" : {"sourceName" : "rs:translucency_gi_raw"},
+                "RsTranslucencyLightingRaw" : {"sourceName" : "rs:translucency_raw"},
+                "RsVolumeDepth" : {"sourceName" : "rs:volumeDepth"},
+                "RsVolumeFogEmission" : {"sourceName" : "rs:volume_fog_emission"},
+                "RsVolumeFogTint" : {"sourceName" : "rs:volume_fog_tint"},
+                "RsVolumeLighting" : {"sourceName" : "rs:volume"},
+                "RsWorldPosition" : {"sourceName" : "rs:world"}}
 
 class RSRenderSettingsChaser(maxUsd.ExportChaser):
     def __init__(self, factoryContext, *args, **kwargs):
@@ -61,9 +102,12 @@ class RSRenderSettingsChaser(maxUsd.ExportChaser):
             #Redshift needs this to save a file
             renderSettingsPrim.CreateAttribute("redshift:global:RS_outputEnable", Sdf.ValueTypeNames.Bool).Set(True)
 
+            renderSettingSkip = ["BlockSize"]
             for prop in props:
                 try:
                     #TODO: Remap any render settings where the names do not match max.
+                    if str(prop) in renderSettingSkip:
+                        continue
                     propAttr = getattr(rt.renderers.current, str(prop))
                     type = rt.classOf(propAttr)
                     if type == rt.name:
@@ -74,6 +118,11 @@ class RSRenderSettingsChaser(maxUsd.ExportChaser):
                     renderSettingsPrim.CreateAttribute("redshift:global:" + str(prop), maxTypeToSdf[type]).Set(propAttr)
                 except:
                     pass
+
+            #Block sizes seem to use the index of the enum                              #curious
+            blockSizes = ["RS_BLOCKSIZE_64", "RS_BLOCKSIZE_128", "RS_BLOCKSIZE_256", "512"]
+            blockSizeIndex = blockSizes.index(str(rt.renderers.current.BlockSize))
+            renderSettingsPrim.CreateAttribute("redshift:global:BlockSize", Sdf.ValueTypeNames.String).Set(str(blockSizeIndex))
 
             #Render Product (the actual target to disk)
             renderProduct = UsdRender.Product.Define(self.stage, "/Render/Products/MultiLayer")
@@ -100,11 +149,14 @@ class RSRenderSettingsChaser(maxUsd.ExportChaser):
             ElementManager = rt.maxOps.GetCurRenderElementMgr()
             for i in range(0, ElementManager.NumRenderElements()):
                 rendElement = ElementManager.GetRenderElement(i)
-                aovPath = Sdf.Path("/Render/Products/Vars").AppendPath(rendElement.elementName)
-                aov = UsdRender.Var.Define(self.stage, aovPath)
-                aov.CreateSourceNameAttr().Set("color")
-                print(rt.classOf(rendElement))
-                orderedVarsRel.AddTarget(aovPath)
+                elementClass = str(rt.classOf(rendElement))
+                if elementClass in aovSourceMap:
+                    elementMap = aovSourceMap[elementClass]
+                    aovPath = Sdf.Path("/Render/Products/Vars").AppendPath(rendElement.elementName)
+                    aov = UsdRender.Var.Define(self.stage, aovPath)
+                    aov.CreateSourceNameAttr().Set(elementMap["sourceName"])
+                    aov.GetPrim().CreateAttribute("driver:parameters:aov:name", Sdf.ValueTypeNames.String).Set(rendElement.elementName)
+                    orderedVarsRel.AddTarget(aovPath)
 
             #Volume scattering
             atmosCount = rt.numAtmospherics
