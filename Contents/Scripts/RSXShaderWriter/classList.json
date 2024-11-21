@@ -1,0 +1,534 @@
+{
+    "MultiOutputChannelTexmapToTexmap": [
+        "",
+        "out"
+    ],
+    "rsAmbientOcclusion": [
+        "AmbientOcclusion",
+        "out"
+    ],
+    "rsMathAbs": [
+        "RSMathAbs",
+        "out"
+    ],
+    "rsMathAdd": [
+        "RSMathAdd",
+        "out"
+    ],
+    "rsMathATan2": [
+        "RSMathArcTan2",
+        "out"
+    ],
+    "rsMathACos": [
+        "RSMathArcCos",
+        "out"
+    ],
+    "rsMathASin": [
+        "RSMathArcSin",
+        "out"
+    ],
+    "rsMathATan": [
+        "RSMathArcTan",
+        "out"
+    ],
+    "rsMathBias": [
+        "RSMathBias",
+        "out"
+    ],
+    "rsBitmap": [
+        "TextureSampler",
+        "outColor"
+    ],
+    "rsBrick": [
+        "Brick",
+        "outColor"
+    ],
+    "rsBumpBlender": [
+        "BumpBlender",
+        "outDisplacementVector"
+    ],
+    "rsBumpMap": [
+        "BumpMap",
+        "out"
+    ],
+    "rsCameraMap": [
+        "RSCameraMap",
+        "outColor"
+    ],
+    "rsMathRange": [
+        "RSMathRange",
+        "out"
+    ],
+    "rsMathAbsColor": [
+        "RSMathAbsColor",
+        "outColor"
+    ],
+    "rsMathBiasColor": [
+        "RSMathBiasColor",
+        "outColor"
+    ],
+    "rsColorRange": [
+        "RSColorRange",
+        "out"
+    ],
+    "rsColorConstant": [
+        "RSColorConstant",
+        "outColor"
+    ],
+    "rsMathExpColor": [
+        "RSMathExpColor",
+        "outColor"
+    ],
+    "rsMathGainColor": [
+        "RSMathGainColor",
+        "outColor"
+    ],
+    "rsMathInvColor": [
+        "RSMathInvertColor",
+        "out"
+    ],
+    "rsColorMaker": [
+        "RSColorMaker",
+        "outColor"
+    ],
+    "rsColorMix": [
+        "RSColorMix",
+        "outColor"
+    ],
+    "rsMathSaturateColor": [
+        "RSMathSaturateColor",
+        "outColor"
+    ],
+    "rsColorSplitter": [
+        "RSColorSplitter",
+        ""
+    ],
+    "rsMathSubColor": [
+        "RSMathSubColor",
+        "outColor"
+    ],
+    "rsColor2HSV": [
+        "RSColor2HSV",
+        "outColor"
+    ],
+    "rsUserDataColor": [
+        "RSUserDataColor",
+        "out"
+    ],
+    "rsMathCos": [
+        "RSMathCos",
+        "out"
+    ],
+    "rsMathCrossVector": [
+        "RSCrossProduct",
+        "out"
+    ],
+    "rsCurvature": [
+        "RSCurvature",
+        "out"
+    ],
+    "rsDisplacement": [
+        "Displacement",
+        "out"
+    ],
+    "rsDisplacementBlender": [
+        "DisplacementBlender",
+        "out"
+    ],
+    "rsMathDiv": [
+        "RSMathDiv",
+        "out"
+    ],
+    "rsMathDotVector": [
+        "RSDotProduct",
+        "out"
+    ],
+    "rsEnvironment": [
+        "RSEnvironment",
+        "outColor"
+    ],
+    "rsMathExp": [
+        "RSMathExp",
+        "out"
+    ],
+    "rsFlakes": [
+        "RSFlakes",
+        "out"
+    ],
+    "rsMathFloor": [
+        "RSMathFloor",
+        "out"
+    ],
+    "rsMathFrac": [
+        "RSMathFrac",
+        "out"
+    ],
+    "rsFresnel": [
+        "RSFresnel",
+        "out"
+    ],
+    "rsMathGain": [
+        "RSMathGain",
+        "out"
+    ],
+    "rsHSV2Color": [
+        "RSHSVToColor",
+        "outColor"
+    ],
+    "rsHairPosition": [
+        "RSHairPosition",
+        "outVector"
+    ],
+    "rsHairRandomColor": [
+        "RSHairRandomColor",
+        "out"
+    ],
+    "rsIORToMetalTints": [
+        "RSIORToMetalTints",
+        ""
+    ],
+    "rsUserDataInteger": [
+        "RSUserDataInteger",
+        "out"
+    ],
+    "rsMathInv": [
+        "RSMathInv",
+        "out"
+    ],
+    "rsJitter": [
+        "Jitter",
+        "outColor"
+    ],
+    "rsMathLn": [
+        "RSMathLn",
+        "out"
+    ],
+    "rsMathLog": [
+        "RSMathLog",
+        "out"
+    ],
+    "rsMatCap": [
+        "RSMatCap",
+        "out"
+    ],
+    "rsMathMax": [
+        "RSMathMax",
+        "out"
+    ],
+    "rsMaxonNoise": [
+        "MaxonNoise",
+        "outColor"
+    ],
+    "rsMathMin": [
+        "RSMathMin",
+        "out"
+    ],
+    "rsMathMix": [
+        "RSMathMix",
+        "out"
+    ],
+    "rsMathMod": [
+        "RSMathMod",
+        "out"
+    ],
+    "rsMathMul": [
+        "RSMathMul",
+        "out"
+    ],
+    "rsMathNeg": [
+        "RSMathNeg",
+        "out"
+    ],
+    "rsMathNormalizeVector": [
+        "RSMathNormalizeVector",
+        "out"
+    ],
+    "rsOSLMap": [
+        "rsOSL",
+        ""
+    ],
+    "rsOSLMaterial": [
+        "rsOSL",
+        ""
+    ],
+    "rsPavement": [
+        "RSPavement",
+        ""
+    ],
+    "rsPhysicalSky": [
+        "RSPhysicalSky",
+        "outColor"
+    ],
+    "rsMathPow": [
+        "RSMathPow",
+        "out"
+    ],
+    "rsRaySwitch": [
+        "RaySwitch",
+        "outColor"
+    ],
+    "rsMathRcp": [
+        "RSMathRcp",
+        "out"
+    ],
+    "rsRoundCorners": [
+        "RoundCorners",
+        "out"
+    ],
+    "rsMathSaturate": [
+        "RSMathSaturate",
+        "out"
+    ],
+    "rsUserDataScalar": [
+        "RSUserDataScalar",
+        "out"
+    ],
+    "rsShaderSwitch": [
+        "RSShaderSwitch",
+        "outColor"
+    ],
+    "rsShave": [
+        "RSShave",
+        "out"
+    ],
+    "rsMathSign": [
+        "RSMathSign",
+        "out"
+    ],
+    "rsMathSin": [
+        "RSMathSin",
+        "out"
+    ],
+    "rsMathSqrt": [
+        "RSMathSqrt",
+        "out"
+    ],
+    "rsState": [
+        "State",
+        "out"
+    ],
+    "rsMathSub": [
+        "RSMathSub",
+        "out"
+    ],
+    "rsMathTan": [
+        "RSMathTan",
+        "out"
+    ],
+    "rsTexture": [
+        "TextureSampler",
+        "outColor"
+    ],
+    "rsTiles": [
+        "RSTiles",
+        ""
+    ],
+    "rsTriPlanar": [
+        "TriPlanar",
+        "outColor"
+    ],
+    "rsUVProjection": [
+        "UVProjection",
+        "out"
+    ],
+    "rsMathAbsVector": [
+        "RSMathAbsVector",
+        "out"
+    ],
+    "rsMathAddVector": [
+        "RSMathAddVector",
+        "out"
+    ],
+    "rsMathBiasVector": [
+        "RSMathBiasVector",
+        "out"
+    ],
+    "rsMathRangeVector": [
+        "RSMathRangeVector",
+        "out"
+    ],
+    "rsMathDivVector": [
+        "RSMathDivVector",
+        "out"
+    ],
+    "rsMathExpVector": [
+        "RSMathExpVector",
+        "out"
+    ],
+    "rsMathFloorVector": [
+        "RSMathFloorVector",
+        "out"
+    ],
+    "rsMathFracVector": [
+        "RSMathFracVector",
+        "out"
+    ],
+    "rsMathGainVector": [
+        "RSMathGainVector",
+        "out"
+    ],
+    "rsMathInvVector": [
+        "RSMathInvVector",
+        "out"
+    ],
+    "rsMathLengthVector": [
+        "RSMathLengthVector",
+        "out"
+    ],
+    "rsMathLnVector": [
+        "RSMathLnVector",
+        "out"
+    ],
+    "rsMathLogVector": [
+        "RSMathLogVector",
+        "out"
+    ],
+    "rsVectorMaker": [
+        "RSVectorMaker",
+        "out"
+    ],
+    "rsMathMaxVector": [
+        "RSMathMaxVector",
+        "out"
+    ],
+    "rsMathMinVector": [
+        "RSMathMinVector",
+        "out"
+    ],
+    "rsMathMixVector": [
+        "RSMathMixVector",
+        "out"
+    ],
+    "rsMathModVector": [
+        "RSMathModVector",
+        "out"
+    ],
+    "rsMathMulVector": [
+        "RSMathMulVector",
+        "out"
+    ],
+    "rsMathNegVector": [
+        "RSMathNegVector",
+        "out"
+    ],
+    "rsMathPowVector": [
+        "RSMathPowVector",
+        "out"
+    ],
+    "rsMathRcpVector": [
+        "RSMathRcpVector",
+        "out"
+    ],
+    "rsMathSaturateVector": [
+        "RSMathSaturateVector",
+        "out"
+    ],
+    "rsMathSignVector": [
+        "RSMathSignVector",
+        "out"
+    ],
+    "rsMathSqrtVector": [
+        "RSMathSqrtVector",
+        "out"
+    ],
+    "rsMathSubVector": [
+        "RSMathSubVector",
+        "out"
+    ],
+    "rsVectorToScalars": [
+        "RSVectorToScalars",
+        "out"
+    ],
+    "rsUserDataVector": [
+        "RSUserDataVector",
+        "out"
+    ],
+    "rsWireFrame": [
+        "WireFrame",
+        "out"
+    ],
+    "rsStandardMaterial": [
+        "StandardMaterial",
+        "outColor"
+    ],
+    "rsMaterialSwitch": [
+        "RSShaderSwitch",
+        "outClosure"
+    ],
+    "rsPrincipledHair": [
+        "Hair2",
+        "out"
+    ],
+    "rsSprite": [
+        "Sprite",
+        "outColor"
+    ],
+    "rsMaterialBlender": [
+        "MaterialBlender",
+        "out"
+    ],
+    "rsVolume": [
+        "Volume",
+        "outColor"
+    ],
+    "rsIncandescent": [
+        "Incandescent",
+        "outColor"
+    ],
+    "rsStoreColorToAOV": [
+        "StoreColorToAOV",
+        "outColor"
+    ],
+    "rsColorCorrection": [
+        "RSColorCorrection",
+        "outColor"
+    ],
+    "CompositeMap": [
+        "RSColorLayer",
+        "outColor"
+    ],
+    "Gradient_Ramp": [
+        "RSRamp",
+        "outColor"
+    ],
+    "VertexColor ": [
+        "RSUserDataColor",
+        "out"
+    ],
+    "rsStandardVolume": [
+        "StandardVolume",
+        "outColor"
+    ],
+    "rsVolumeColorAttribute": [
+        "VolumeColorAttribute",
+        "outColor"
+    ],
+    "rsVolumeScalarAttribute": [
+        "VolumeScalarAttribute",
+        "out"
+    ],
+    "rsToonMaterial": [
+        "ToonMaterial",
+        "outColor"
+    ],
+    "rsContour": [
+        "Contour",
+        "outColor"
+    ],
+    "rsTonemapPattern": [
+        "TonemapPattern",
+        "outColor"
+    ],
+    "rsMaterialOutput": [
+        "",
+        ""
+    ],
+    "ForestColor": [
+        "",
+        ""
+    ],
+    "rsDistance" : [
+        "Distance",
+        ""
+    ]
+}
