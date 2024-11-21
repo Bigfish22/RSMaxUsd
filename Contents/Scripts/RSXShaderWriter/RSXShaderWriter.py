@@ -24,6 +24,7 @@ import usd_utils
 import traceback
 import os
 import re
+import json
 
 maxTypeToSdf = {rt.Double : Sdf.ValueTypeNames.Float,
                 rt.Integer : Sdf.ValueTypeNames.Int,
@@ -35,139 +36,15 @@ maxTypeToSdf = {rt.Double : Sdf.ValueTypeNames.Float,
                 rt.BitMap : Sdf.ValueTypeNames.Token,
                 rt.point2 : Sdf.ValueTypeNames.Float2,
                 rt.material : Sdf.ValueTypeNames.Token}
-                    
+                                    
+
 #Key: maxClass : [Houdini/core Name, Output Pin Name(if the node has multi outputs, we can get this from max]
-maxShaderToRS = {rt.MultiOutputChannelTexmapToTexmap : ["", 'out'],
-                rt.rsAmbientOcclusion : ['AmbientOcclusion', 'out'],
-                rt.rsMathAbs : ['RSMathAbs', 'out'],
-                rt.rsMathAdd : ['RSMathAdd', 'out'],
-                rt.rsMathATan2 : ['RSMathArcTan2', 'out'],
-                rt.rsMathACos : ['RSMathArcCos', 'out'],
-                rt.rsMathASin : ['RSMathArcSin', 'out'],
-                rt.rsMathATan : ['RSMathArcTan', 'out'],
-                rt.rsMathBias : ['RSMathBias', 'out'],
-                rt.rsBitmap : ['TextureSampler', 'outColor'],
-                rt.rsBrick : ['Brick', 'outColor'],
-                rt.rsBumpBlender : ['BumpBlender', 'outDisplacementVector'],
-                rt.rsBumpMap : ['BumpMap', 'out'],
-                rt.rsCameraMap : ['RSCameraMap', 'outColor'],
-                rt.rsMathRange : ['RSMathRange', 'out'],
-                rt.rsMathAbsColor : ['RSMathAbsColor', 'outColor'],
-                rt.rsMathBiasColor : ['RSMathBiasColor', 'outColor'],
-                rt.rsColorRange : ['RSColorRange', 'out'],
-                rt.rsColorConstant : ['RSColorConstant', 'outColor'],
-                rt.rsMathExpColor : ['RSMathExpColor', 'outColor'],
-                rt.rsMathGainColor : ['RSMathGainColor', 'outColor'],
-                rt.rsMathInvColor : ['RSMathInvertColor', 'out'],
-                rt.rsColorMaker : ['RSColorMaker', 'outColor'],
-                rt.rsColorMix : ['RSColorMix', 'outColor'],
-                rt.rsMathSaturateColor : ['RSMathSaturateColor', 'outColor'],
-                rt.rsColorSplitter : ['RSColorSplitter', ''],
-                rt.rsMathSubColor : ['RSMathSubColor', 'outColor'],
-                rt.rsColor2HSV : ['RSColor2HSV', 'outColor'],
-                rt.rsUserDataColor : ['RSUserDataColor', 'out'],
-                rt.rsMathCos : ['RSMathCos', 'out'],
-                rt.rsMathCrossVector : ['RSCrossProduct', 'out'],
-                rt.rsCurvature : ['RSCurvature', 'out'],
-                rt.rsDisplacement : ['Displacement', 'out'],
-                rt.rsDisplacementBlender : ['DisplacementBlender', 'out'],
-                rt.rsMathDiv : ['RSMathDiv', 'out'],
-                rt.rsMathDotVector : ['RSDotProduct', 'out'],
-                rt.rsEnvironment : ['RSEnvironment', 'outColor'],
-                rt.rsMathExp : ['RSMathExp', 'out'],
-                rt.rsFlakes : ['RSFlakes', 'out'],
-                rt.rsMathFloor : ['RSMathFloor', 'out'],
-                rt.rsMathFrac : ['RSMathFrac', 'out'],
-                rt.rsFresnel : ['RSFresnel', 'out'],
-                rt.rsMathGain : ['RSMathGain', 'out'],
-                rt.rsHSV2Color : ['RSHSVToColor', 'outColor'],
-                rt.rsHairPosition : ['RSHairPosition', 'outVector'],
-                rt.rsHairRandomColor : ['RSHairRandomColor', 'out'],
-                rt.rsIORToMetalTints : ['RSIORToMetalTints', ''],
-                rt.rsUserDataInteger : ['RSUserDataInteger', 'out'],
-                rt.rsMathInv : ['RSMathInv', 'out'],
-                rt.rsJitter : ['Jitter', 'outColor'],
-                rt.rsMathLn : ['RSMathLn', 'out'],
-                rt.rsMathLog : ['RSMathLog', 'out'],
-                rt.rsMatCap : ['RSMatCap', 'out'],
-                rt.rsMathMax : ['RSMathMax', 'out'],
-                rt.rsMaxonNoise : ['MaxonNoise', 'outColor'],
-                rt.rsMathMin : ['RSMathMin', 'out'],
-                rt.rsMathMix : ['RSMathMix', 'out'],
-                rt.rsMathMod : ['RSMathMod', 'out'],
-                rt.rsMathMul : ['RSMathMul', 'out'],
-                rt.rsMathNeg : ['RSMathNeg', 'out'],
-                rt.rsMathNormalizeVector : ['RSMathNormalizeVector', 'out'],
-                rt.rsOSLMap : ['rsOSL', ''],
-                rt.rsOSLMaterial : ['rsOSL', ''],
-                rt.rsPavement : ['RSPavement', ''],
-                rt.rsPhysicalSky : ['RSPhysicalSky', 'outColor'],
-                rt.rsMathPow : ['RSMathPow', 'out'],
-                rt.rsRaySwitch : ['RaySwitch', 'outColor'],
-                rt.rsMathRcp : ['RSMathRcp', 'out'],
-                rt.rsRoundCorners : ['RoundCorners', 'out'],
-                rt.rsMathSaturate : ['RSMathSaturate', 'out'],
-                rt.rsUserDataScalar : ['RSUserDataScalar', 'out'],
-                rt.rsShaderSwitch : ['RSShaderSwitch', 'outColor'],
-                rt.rsShave : ['RSShave', 'out'],
-                rt.rsMathSign : ['RSMathSign', 'out'],
-                rt.rsMathSin : ['RSMathSin', 'out'],
-                rt.rsMathSqrt : ['RSMathSqrt', 'out'],
-                rt.rsState : ['State', 'out'],
-                rt.rsMathSub : ['RSMathSub', 'out'],
-                rt.rsMathTan : ['RSMathTan', 'out'],
-                rt.rsTexture : ['TextureSampler', 'outColor'],
-                rt.rsTiles : ['RSTiles', ''],
-                rt.rsTriPlanar : ['TriPlanar', 'outColor'],
-                rt.rsUVProjection : ['UVProjection', 'out'],
-                rt.rsMathAbsVector : ['RSMathAbsVector', 'out'],
-                rt.rsMathAddVector : ['RSMathAddVector', 'out'],
-                rt.rsMathBiasVector : ['RSMathBiasVector', 'out'],
-                rt.rsMathRangeVector : ['RSMathRangeVector', 'out'],
-                rt.rsMathDivVector : ['RSMathDivVector', 'out'],
-                rt.rsMathExpVector : ['RSMathExpVector', 'out'],
-                rt.rsMathFloorVector : ['RSMathFloorVector', 'out'],
-                rt.rsMathFracVector : ['RSMathFracVector', 'out'],
-                rt.rsMathGainVector : ['RSMathGainVector', 'out'],
-                rt.rsMathInvVector : ['RSMathInvVector', 'out'],
-                rt.rsMathLengthVector : ['RSMathLengthVector', 'out'],
-                rt.rsMathLnVector : ['RSMathLnVector', 'out'],
-                rt.rsMathLogVector : ['RSMathLogVector', 'out'],
-                rt.rsVectorMaker : ['RSVectorMaker', 'out'],
-                rt.rsMathMaxVector : ['RSMathMaxVector', 'out'],
-                rt.rsMathMinVector : ['RSMathMinVector', 'out'],
-                rt.rsMathMixVector : ['RSMathMixVector', 'out'],
-                rt.rsMathModVector : ['RSMathModVector', 'out'],
-                rt.rsMathMulVector : ['RSMathMulVector', 'out'],
-                rt.rsMathNegVector : ['RSMathNegVector', 'out'],
-                rt.rsMathPowVector : ['RSMathPowVector', 'out'],
-                rt.rsMathRcpVector : ['RSMathRcpVector', 'out'],
-                rt.rsMathSaturateVector : ['RSMathSaturateVector', 'out'],
-                rt.rsMathSignVector : ['RSMathSignVector', 'out'],
-                rt.rsMathSqrtVector : ['RSMathSqrtVector', 'out'],
-                rt.rsMathSubVector : ['RSMathSubVector', 'out'],
-                rt.rsVectorToScalars : ['RSVectorToScalars', 'out'],
-                rt.rsUserDataVector : ['RSUserDataVector', 'out'],
-                rt.rsWireFrame : ['WireFrame', 'out'],
-                rt.rsStandardMaterial : ['StandardMaterial', 'outColor'],
-                rt.rsMaterialSwitch : ["RSShaderSwitch", 'outClosure'],
-                rt.rsPrincipledHair : ['Hair2', 'out'],
-                rt.rsSprite : ['Sprite', 'outColor'],
-                rt.rsMaterialBlender : ['MaterialBlender', 'out'],
-                rt.rsVolume : ['Volume', 'outColor'],
-                rt.rsIncandescent : ['Incandescent', 'outColor'],
-                rt.rsStoreColorToAOV : ['StoreColorToAOV', 'outColor'],
-                rt.rsColorCorrection : ['RSColorCorrection', 'outColor'],
-                rt.CompositeMap :      ['RSColorLayer', 'outColor'],
-                rt.Gradient_Ramp :     ['RSRamp', 'outColor'],
-                rt.VertexColor  :      ['RSUserDataColor', 'out'],
-                rt.rsStandardVolume :  ['StandardVolume', 'outColor'],
-                rt.rsVolumeColorAttribute : ['VolumeColorAttribute', 'outColor'],
-                rt.rsVolumeScalarAttribute : ['VolumeScalarAttribute', 'out'],
-                rt.rsToonMaterial : ['ToonMaterial', 'outColor'],
-                rt.rsContour : ['Contour', 'outColor'],
-                rt.rsTonemapPattern : ['TonemapPattern', 'outColor'],
-                rt.rsMaterialOutput : ['', '']}
+maxShaderToRS = {}
+with open(os.path.dirname(os.path.abspath(__file__)) + "/classList.json", "r") as classList:
+    classJson = json.load(classList)
+    for classStr, list in classJson.items():
+        if hasattr(rt, classStr):
+            maxShaderToRS[getattr(rt, classStr)] = list
                     
 PropertyRemaps = {rt.rsOSLMap : {'OSLCode':'RS_osl_code', 'oslFilename':'RS_osl_file', 'oslSource':'RS_osl_source'},
                   rt.rsOSLMaterial : {'OSLCode':'RS_osl_code', 'oslFilename':'RS_osl_file', 'oslSource':'RS_osl_source'},
@@ -176,13 +53,14 @@ PropertyRemaps = {rt.rsOSLMap : {'OSLCode':'RS_osl_code', 'oslFilename':'RS_osl_
                   rt.rsBitmap : {"tex0_colorspace" : "tex0_colorSpace", "tex0_filename" : "tex0"}}
 
 
-
 class RSShaderWriter(maxUsd.ShaderWriter):
     def Write(self):
         try:
             self.nodeTranslators = {rt.CompositeMap: self.NodeTranslateComposite,
                                     rt.Gradient_Ramp : self.NodeTranslateGradientRamp,
                                     rt.VertexColor : self.NodeTranslateVertexColor}
+            if hasattr(rt, "ForestColor"): #just incase forest doesn't exist
+                self.nodeTranslators[getattr(rt, "ForestColor")] = self.NodeTranslateForestColor
                                         
             #if its targetting a different file we need this for relative pathing
             stage = self.GetUsdStage()
@@ -556,6 +434,24 @@ class RSShaderWriter(maxUsd.ShaderWriter):
         usdShader.CreateInput("attribute", Sdf.ValueTypeNames.String).Set("vertexColor")
         
         parentPrim.CreateInput(self.CleanMapProperty(propertName), Sdf.ValueTypeNames.Token).ConnectToSource(usdShader.ConnectableAPI(), "out")
+        
+    def NodeTranslateForestColor(self, parentPrim, parentNode, node, propertName):
+                   #Normal, #Color, #Additive, #Average, #Multiply
+        tintModes = ["0", "4", "2", "1", "4"]
+        primName = node.name.replace(" ", "_").replace("#", "_")
+        
+        usdShader = UsdShade.Shader.Define(self.GetUsdStage(), ((self.GetUsdPath()).GetParentPath()).AppendPath(primName))
+        usdShader.CreateIdAttr("redshift::RSColorLayer")
+        
+        self.AddShader(usdShader, node, node.mapbase, 'base_color', node.mapbase)
+        
+        attrShader = UsdShade.Shader.Define(self.GetUsdStage(), ((self.GetUsdPath()).GetParentPath()).AppendPath(primName + "_forestAttr"))
+        attrShader.CreateIdAttr("redshift::RSUserDataColor")
+        attrShader.CreateInput("attribute", Sdf.ValueTypeNames.String).Set("displayColor")
+        usdShader.CreateInput("layer1_color", Sdf.ValueTypeNames.Token).ConnectToSource(attrShader.ConnectableAPI(), "out")
+        usdShader.CreateInput("layer1_blend_mode", Sdf.ValueTypeNames.Token).Set(tintModes[node.tintmixmode])
+        
+        parentPrim.CreateInput(self.CleanMapProperty(propertName), Sdf.ValueTypeNames.Token).ConnectToSource(usdShader.ConnectableAPI(), "outColor")
         
     @classmethod
     def CanExport(cls, exportArgs):
