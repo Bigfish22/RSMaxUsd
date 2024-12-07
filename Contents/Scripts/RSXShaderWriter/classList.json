@@ -69,7 +69,7 @@
     ],
     "rsColorRange": [
         "RSColorRange",
-        "out"
+        "outColor"
     ],
     "rsColorConstant": [
         "RSColorConstant",
@@ -491,7 +491,7 @@
         "RSRamp",
         "outColor"
     ],
-    "VertexColor ": [
+    "VertexColor": [
         "RSUserDataColor",
         "out"
     ],

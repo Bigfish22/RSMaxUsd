@@ -360,19 +360,21 @@ class RSShaderWriter(maxUsd.ShaderWriter):
                 propNameBase = 'layer' + str(i)
                 
             self.AddShader(usdShader, node, node.mapList[i], propNameBase + '_color', node.mapList[i])
-            
-            opacityAttr = usdShader.CreateInput(propNameBase + '_mask', Sdf.ValueTypeNames.Float)
-            if rt.animControllerHelper(node.opacity[i]) is not None:
-                animated = True
-            if animated and self.animationMode != maxUsd.TimeMode.CurrentFrame:
-                currentStep = self.startTime
-                while currentStep < self.endTime:
-                    with pymxs.attime(currentStep):
-                        value = node.opacity[i] / 100.0
-                    opacityAttr.Set(value, currentStep)
-                    currentStep += 1 / self.timeStep
+            if node.mask[i] != rt.undefined:
+                self.AddShader(usdShader, node, node.mask[i], propNameBase + '_mask', node.mask[i])
             else:
-                opacityAttr.Set(node.opacity[i] / 100.0)
+                opacityAttr = usdShader.CreateInput(propNameBase + '_mask', Sdf.ValueTypeNames.Float)
+                if rt.animControllerHelper(node.opacity[i]) is not None:
+                    animated = True
+                if animated and self.animationMode != maxUsd.TimeMode.CurrentFrame:
+                    currentStep = self.startTime
+                    while currentStep < self.endTime:
+                        with pymxs.attime(currentStep):
+                            value = node.opacity[i] / 100.0
+                        opacityAttr.Set(value, currentStep)
+                        currentStep += 1 / self.timeStep
+                else:
+                    opacityAttr.Set(node.opacity[i] / 100.0)
                 
             usdShader.CreateInput(propNameBase + '_enable', Sdf.ValueTypeNames.Int).Set(int(node.mapEnabled[i]))
             
@@ -425,6 +427,9 @@ class RSShaderWriter(maxUsd.ShaderWriter):
         usdShader.CreateInput("ramp_basis", Sdf.ValueTypeNames.TokenArray).Set(Vt.TokenArray(interp))
         usdShader.CreateInput("ramp_keys", Sdf.ValueTypeNames.FloatArray).Set(Vt.FloatArray(positions))
         usdShader.CreateInput("ramp_values", Sdf.ValueTypeNames.Color3fArray).Set(Vt.Vec3fArray(values))
+        if node.Source_Map != rt.undefined:
+            self.AddShader(usdShader, node, node.Source_Map, "input", node.Source_Map)
+        
         parentPrim.CreateInput(self.CleanMapProperty(propertName), Sdf.ValueTypeNames.Token).ConnectToSource(usdShader.ConnectableAPI(), "outColor")
         
     def NodeTranslateVertexColor(self, parentPrim, parentNode, node, propertName):
