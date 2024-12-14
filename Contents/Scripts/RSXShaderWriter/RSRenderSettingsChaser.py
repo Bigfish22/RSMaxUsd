@@ -102,7 +102,7 @@ class RSRenderSettingsChaser(maxUsd.ExportChaser):
             #Redshift needs this to save a file
             renderSettingsPrim.CreateAttribute("redshift:global:RS_outputEnable", Sdf.ValueTypeNames.Bool).Set(True)
 
-            renderSettingSkip = ["BlockSize"]
+            renderSettingSkip = ["BlockSize", "UnifiedDisableDivision", "IrradiancePointCloudScreenRadius"]
             for prop in props:
                 try:
                     #TODO: Remap any render settings where the names do not match max.
@@ -123,6 +123,15 @@ class RSRenderSettingsChaser(maxUsd.ExportChaser):
             blockSizes = ["RS_BLOCKSIZE_64", "RS_BLOCKSIZE_128", "RS_BLOCKSIZE_256", "512"]
             blockSizeIndex = blockSizes.index(str(rt.renderers.current.BlockSize))
             renderSettingsPrim.CreateAttribute("redshift:global:BlockSize", Sdf.ValueTypeNames.String).Set(str(blockSizeIndex))
+            
+            #These setting are inverted max vs solaris
+            renderSettingsPrim.CreateAttribute("redshift:global:UnifiedDisableDivision", Sdf.ValueTypeNames.Bool).Set(not rt.renderers.current.UnifiedDisableDivision)
+            renderSettingsPrim.CreateAttribute("redshift:global:DisableSamplingOptimizations", Sdf.ValueTypeNames.Bool).Set(not rt.renderers.current.DisableSamplingOptimizations)
+            renderSettingsPrim.CreateAttribute("redshift:global:DisableShadowRayBiasing", Sdf.ValueTypeNames.Bool).Set(not rt.renderers.current.DisableShadowRayBiasing)
+            
+            
+            #Irradiance expects enum names
+            renderSettingsPrim.CreateAttribute("redshift:global:IrradiancePointCloudScreenRadius2", Sdf.ValueTypeNames.String).Set(str([4, 8, 16, 32, 64].index(rt.renderers.current.IrradiancePointCloudScreenRadius)))
 
             #Render Product (the actual target to disk)
             renderProduct = UsdRender.Product.Define(self.stage, "/Render/Products/MultiLayer")
