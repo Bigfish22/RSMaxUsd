@@ -530,5 +530,9 @@
     "rsDistance" : [
         "Distance",
         ""
+    ],
+    "rsOpenPBRMaterial" : [
+        "OpenPBRMaterial",
+        "outColor"
     ]
 }

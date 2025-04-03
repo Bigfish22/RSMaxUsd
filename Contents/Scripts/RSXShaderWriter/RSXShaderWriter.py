@@ -210,7 +210,7 @@ class RSShaderWriter(maxUsd.ShaderWriter):
         prim.CreateInput("offset", Sdf.ValueTypeNames.Float2).Set(Gf.Vec2f(value.U_Offset, value.V_Offset))
         
     def AddShader(self, parentPrim, parentNode, prop, propertyOverride = None, nodeOverride = None):
-        if not (str(prop)).endswith(("_map", "p_input")) and nodeOverride == None and str(prop) not in (('surface', 'Volume', 'contour', 'displacement', 'bumpMap', 'environment')): #TODO: should probably just be checking if this is a textureMap class, this will catch undefined and properties, assuming superClassOf doesn't fail for undefined.
+        if not (str(prop)).endswith(("_map", "p_input")) and nodeOverride == None and str(prop) not in (('surface', 'Volume', 'contour', 'displacement', 'bumpMap', 'environment', 'geometry_normal')): #TODO: should probably just be checking if this is a textureMap class, this will catch undefined and properties, assuming superClassOf doesn't fail for undefined.
             return
         
         #some node translators might need to provide a specific max node, instead of just the property
@@ -476,3 +476,4 @@ maxUsd.ShaderWriter.Register(RSShaderWriter, "RS Standard Volume")
 maxUsd.ShaderWriter.Register(RSShaderWriter, "RS Toon Material")
 maxUsd.ShaderWriter.Register(RSShaderWriter, "RS Material Output")
 maxUsd.ShaderWriter.Register(RSShaderWriter, "RS OSL Material")
+maxUsd.ShaderWriter.Register(RSShaderWriter, "RS OpenPBR Material")
