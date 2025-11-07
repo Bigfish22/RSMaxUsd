@@ -29,6 +29,7 @@ import json
 maxTypeToSdf = {rt.Double : Sdf.ValueTypeNames.Float,
                 rt.Integer : Sdf.ValueTypeNames.Int,
                 rt.Color : Sdf.ValueTypeNames.Color3f,
+                rt.Color_RGBA : Sdf.ValueTypeNames.Color4f,
                 rt.BooleanClass : Sdf.ValueTypeNames.Bool,
                 rt.string : Sdf.ValueTypeNames.String,
                 rt.point3 : Sdf.ValueTypeNames.Float3,
@@ -117,6 +118,16 @@ class RSShaderWriter(maxUsd.ShaderWriter):
             print('Write - Error: %s' % str(e))
             print(traceback.format_exc())
             
+    def TypeOf(self, prop, value, template):
+        type = rt.classOf(value)
+        if type == rt.Color:
+            try:
+                rt.setPropertyController(template, prop,  rt.Color_RGBA())
+                return rt.Color_RGBA
+            except:
+                return type
+        return type
+
     def AddProperty(self, prim, node, prop, template):
         if(str(prop).endswith(("_map","_mapamount", "_mapenable", "_enable", "_input"))):
             return
@@ -131,7 +142,7 @@ class RSShaderWriter(maxUsd.ShaderWriter):
             if value == getattr(template, str(prop)) and not animated:
                 return #The property is still at its defualt value and it is not animated, so we can just skip doing anything with it
             
-        type = rt.classOf(value)
+        type = self.TypeOf(prop, value, template)
         if not (type in maxTypeToSdf):
             rt.UsdExporter.Log(rt.Name("warn"), (str(prop) + "has unsupported type conversion" + str(type)))
             return
@@ -164,6 +175,8 @@ class RSShaderWriter(maxUsd.ShaderWriter):
         self.type = type
         if type == rt.Color:
             value = (value.r/255, value.g/255, value.b/255)
+        if type == rt.Color_RGBA:
+            value = (value.r/255, value.g/255, value.b/255, value.a/255)
         elif type == rt.point3:
             value = Gf.Vec3f(value.x, value.y, value.z)
         elif type == rt.string:
@@ -210,8 +223,6 @@ class RSShaderWriter(maxUsd.ShaderWriter):
         prim.CreateInput("offset", Sdf.ValueTypeNames.Float2).Set(Gf.Vec2f(value.U_Offset, value.V_Offset))
         
     def AddShader(self, parentPrim, parentNode, prop, propertyOverride = None, nodeOverride = None):
-        if not (str(prop)).endswith(("_map", "p_input")) and nodeOverride == None and str(prop) not in (('surface', 'Volume', 'contour', 'displacement', 'bumpMap', 'environment', 'geometry_normal')): #TODO: should probably just be checking if this is a textureMap class, this will catch undefined and properties, assuming superClassOf doesn't fail for undefined.
-            return
         
         #some node translators might need to provide a specific max node, instead of just the property
         if nodeOverride is not None:
@@ -220,7 +231,7 @@ class RSShaderWriter(maxUsd.ShaderWriter):
             maxShader = getattr(parentNode, str(prop))
         
         #if we have nothing return early
-        if maxShader == rt.undefined:
+        if rt.superClassOf(maxShader) not in ((rt.textureMap, rt.material)):
             return
         
         #do we even support this? if not return early, log to the user.
