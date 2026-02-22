@@ -18,7 +18,13 @@ from pymxs import runtime as rt
 import traceback
 
 #Displacement
-rsModifierProps = {"autoBumpMap": "primvars:redshift:object:RS_objprop_displace_autob",
+rsModifierProps = {#"displacementMode": "primvars:redshift:object:RS_objprop_displace_mode",
+                   #"displacementType" : "primvars:redshift:object:RS_objprop_displace_type",
+                   "autoMaxDisplacement" : "primvars:redshift:object:RS_objprop_displace_maxEnabled",
+                   "bakingResolution" : "primvars:redshift:object:RS_objprop_displace_bakeRes",
+                   "smartBakingResolution" : "primvars:redshift:object:RS_objprop_displace_bakeSmart",
+                   #old disp
+                    "autoBumpMap": "primvars:redshift:object:RS_objprop_displace_autob",
                     "enableDisplacement": "primvars:redshift:object:RS_objprop_displace_enabl",
                     "maxDisplacement": "primvars:redshift:object:RS_objprop_displace_max",
                     "displacementScale": "primvars:redshift:object:RS_objprop_displace_scale",
@@ -33,6 +39,9 @@ rsModifierProps = {"autoBumpMap": "primvars:redshift:object:RS_objprop_displace_
                     "doSmoothUVBoundaries": "primvars:redshift:object:RS_objprop_rstess_smoothBound",
                     "doSmoothSubdivision": "primvars:redshift:object:RS_objprop_rstess_smoothsub",
                     "screenSpaceAdaptive": "primvars:redshift:object:RS_objprop_rstess_ssadaptive"}
+
+rsModifierPropsRemap = {"displacementMode" : ["off","on", "rs"],
+                        "displacementType" : ["vertex", "texture"]}
 
 #matte
 rsObjectProps = {"RS_MATTE_AFFECTEDBYMATTELIGHTS": "primvars:redshift:object:RS_objprop_matte_abyml",
@@ -179,10 +188,15 @@ class RSObjectPropertiesChaser(maxUsd.ExportChaser):
                 #Handle writing mesh params
                 for mod in node.modifiers:
                     if rt.classOf(mod) == rt.RedshiftMeshParams:
+                        if hasattr(mod, "displacementMode"):
+                            prim.CreateAttribute("primvars:redshift:object:RS_objprop_displace_mode", Sdf.ValueTypeNames.String).Set(rsModifierPropsRemap["displacementMode"][mod.displacementMode])
+                            prim.CreateAttribute("primvars:redshift:object:RS_objprop_displace_type", Sdf.ValueTypeNames.String).Set(rsModifierPropsRemap["displacementType"][mod.displacementType])
+                            prim.CreateAttribute("primvars:redshift:object:RS_objprop_displace_tfd_available", Sdf.ValueTypeNames.Bool).Set(True)
                         for prop in rsModifierProps:
-                            value = getattr(mod, prop)
-                            type = rt.classOf(value)
-                            prim.CreateAttribute(rsModifierProps[prop], maxTypeToSdf[type]).Set(self.resolveValue(value, type))
+                            if hasattr(mod, prop):
+                                value = getattr(mod, prop)
+                                type = rt.classOf(value)
+                                prim.CreateAttribute(rsModifierProps[prop], maxTypeToSdf[type]).Set(self.resolveValue(value, type))
                     elif rt.classOf(mod) == rt.RedshiftCameraAttributes:
                         for section in rsCameraProps:
                             subSection = getattr(mod, section)

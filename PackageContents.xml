@@ -1,9 +1,9 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <ApplicationPackage SchemaVersion="1.0" ProductType="Application" AutodeskProduct="3ds Max" AppVersion="1.0.0.142" FriendlyVersion="1.0.0.142" AppNameSpace="appstore.exchange.autodesk.com" Author="Ben" UpgradeCode="{4f6e7e7c-2024-4093-8063-4be9f1b7f00c}" ProductCode="{25A3C623-B027-4F47-A03A-9A8AD429BCF8}" Name="RSUSDExport for Autodesk 3ds Max" Description="RSUSDExport for Autodesk 3ds Max">
   <CompanyDetails Name="Benjamin Mikhaiel" Url="https://github.com/Bigfish22/RSMaxUsd" Email="benjaminmikhaiel@gmail.com" />
-  <RuntimeRequirements OS="Win64" Platform="3ds Max" SeriesMin="2022" SeriesMax="2025" />
+  <RuntimeRequirements OS="Win64" Platform="3ds Max" SeriesMin="2022" SeriesMax="2026" />
   <Components Description="post-start-up scripts parts">
-    <RuntimeRequirements OS="Win64" Platform="3ds Max" SeriesMin="2022" SeriesMax="2025" />
+    <RuntimeRequirements OS="Win64" Platform="3ds Max" SeriesMin="2022" SeriesMax="2026" />
     <ComponentEntry ModuleName="./Contents/Scripts/resources/registerPlugin.ms" />
     <ComponentEntry ModuleName="./Contents/scripts/RSXShaderWriter/registerPlugin.ms" />
     <ComponentEntry ModuleName="./Contents/Scripts/RSShaderReader/registerPlugin.ms" />

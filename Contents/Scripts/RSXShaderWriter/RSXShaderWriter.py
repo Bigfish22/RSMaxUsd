@@ -309,10 +309,10 @@ class RSShaderWriter(maxUsd.ShaderWriter):
         return tidyProperty
         
     def AddDisplacement(self, material, surfacePrim):
-        if rt.classOf(material) not in [rt.rsStandardMaterial, rt.rsMaterialBlender, rt.rsSprite, rt.rsIncandescent]:
+        if rt.classOf(material) not in [rt.rsStandardMaterial, rt.rsOpenPBRMaterial, rt.rsMaterialBlender, rt.rsSprite, rt.rsIncandescent]:
             return #if the material isn't one of these, then there cant be a displacement in the graph so we can just do nothing.
             
-        if rt.classOf(material) == rt.rsStandardMaterial:
+        if rt.classOf(material) == rt.rsStandardMaterial or rt.classOf(material) == rt.rsOpenPBRMaterial:
             #most likely shader first
             if material.displacement_input == rt.undefined:
                 return #no displacement
